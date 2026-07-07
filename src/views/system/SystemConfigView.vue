@@ -1,0 +1,616 @@
+<script setup lang="ts">
+import { ref, reactive, computed, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { apiSystem } from '@/api/system'
+import TagListInput from '@/components/TagListInput.vue'
+
+interface ConfigRow {
+  key: string
+  value: string
+}
+
+type FieldType = 'number' | 'text' | 'textarea' | 'select' | 'switch' | 'tags' | 'lines'
+
+interface FieldDef {
+  key: string
+  label: string
+  desc?: string
+  type: FieldType
+  options?: { label: string; value: string }[]
+}
+
+interface CategoryDef {
+  key: string
+  label: string
+  hint: string
+  fields: FieldDef[]
+  children?: CategoryDef[] // when present, this category renders nested sub-tabs
+}
+
+// Each top-level tab is a parent CategoryDef with `children` sub-tabs. The
+// `el-tabs` rendering loop (see template) handles parent → child nesting.
+const systemCat: CategoryDef = {
+  key: 'system',
+  label: 'System',
+  hint: 'Core runtime, networking, logging and authentication-token settings. Applied immediately after save.',
+  fields: [],
+  children: [
+    {
+      key: 'server',
+      label: 'Server',
+      hint: 'HTTP server timeouts and request handling.',
+      fields: [
+        {
+          key: 'server.read_timeout_secs',
+          label: 'Read Timeout',
+          desc: 'Maximum duration for reading the entire request, including the body. Unit: seconds.',
+          type: 'number',
+        },
+        {
+          key: 'server.write_timeout_secs',
+          label: 'Write Timeout',
+          desc: 'Maximum duration before timing out writes of the response; reset whenever a new request header is read. Unit: seconds.',
+          type: 'number',
+        },
+      ],
+    },
+    {
+      key: 'logging',
+      label: 'Logging',
+      hint: 'Log verbosity and output format.',
+      fields: [
+        {
+          key: 'log.level',
+          label: 'Log Level',
+          type: 'select',
+          options: [
+            { label: 'trace', value: 'trace' },
+            { label: 'debug', value: 'debug' },
+            { label: 'info', value: 'info' },
+            { label: 'warn', value: 'warn' },
+            { label: 'error', value: 'error' },
+          ],
+        },
+        {
+          key: 'log.format',
+          label: 'Log Format',
+          type: 'select',
+          options: [
+            { label: 'text', value: 'text' },
+            { label: 'json', value: 'json' },
+          ],
+        },
+      ],
+    },
+    {
+      key: 'cors',
+      label: 'CORS',
+      hint: 'Cross-origin request policy for the API.',
+      fields: [
+        {
+          key: 'cors.allowed_origins',
+          label: 'Allowed Origins',
+          desc: 'One domain per entry; use * to allow all origins.',
+          type: 'tags',
+        },
+      ],
+    },
+    {
+      key: 'auth_tokens',
+      label: 'Auth Tokens',
+      hint: 'JWT access/refresh token lifetimes.',
+      fields: [
+        { key: 'jwt.access_ttl_secs', label: 'Access Token TTL', desc: 'Unit: seconds', type: 'number' },
+        { key: 'jwt.refresh_ttl_secs', label: 'Refresh Token TTL', desc: 'Unit: seconds', type: 'number' },
+      ],
+    },
+  ],
+}
+
+const usersCat: CategoryDef = {
+  key: 'users',
+  label: 'Users',
+  hint: 'Self-service registration, password policy, invites and traffic quotas. Applied immediately after save.',
+  fields: [],
+  children: [
+    {
+      key: 'registration',
+      label: 'Registration',
+      hint: 'Controls who may create accounts and under what conditions.',
+      fields: [
+        {
+          key: 'user.register_enabled',
+          label: 'Enable Registration',
+          desc: 'When enabled, new users can create accounts via the registration page.',
+          type: 'switch',
+        },
+        {
+          key: 'user.register_require_invite',
+          label: 'Require Invite Code',
+          desc: 'When enabled, registration requires a valid invite code (public registration is invite-only).',
+          type: 'switch',
+        },
+        {
+          key: 'user.register_require_email_verify',
+          label: 'Require Email Verification',
+          desc: 'When enabled, new accounts stay inactive until the user verifies their email via the link we send.',
+          type: 'switch',
+        },
+      ],
+    },
+    {
+      key: 'password_policy',
+      label: 'Password Policy',
+      hint: 'Enforced when an admin or user sets/changes a password.',
+      fields: [
+        {
+          key: 'password.min_length',
+          label: 'Password Min Length',
+          desc: 'Minimum length enforced when an admin or user sets/changes a password.',
+          type: 'number',
+        },
+        {
+          key: 'password.require_complexity',
+          label: 'Require Complexity',
+          desc: 'When enabled, a password must contain uppercase, lowercase, and a digit.',
+          type: 'switch',
+        },
+      ],
+    },
+    {
+      key: 'invites',
+      label: 'Invites',
+      hint: 'Default invite sponsorship quota.',
+      fields: [
+        {
+          key: 'invite.default_user_quota',
+          label: 'Default User Invite Quota',
+          desc: 'Max successful registrations each user may sponsor (0 = disabled). Users with a higher per-user max_invites override this.',
+          type: 'number',
+        },
+      ],
+    },
+    {
+      key: 'traffic',
+      label: 'Traffic',
+      hint: 'Global monthly traffic quota reset.',
+      fields: [
+        {
+          key: 'quota.reset_day',
+          label: 'Quota Reset Day',
+          desc: 'Global monthly quota reset day (1-28). Applied to users with "Monthly reset" enabled. All opted-in users reset on this day.',
+          type: 'number',
+        },
+      ],
+    },
+  ],
+}
+
+const securityCat: CategoryDef = {
+  key: 'security',
+  label: 'Security',
+  hint: 'Anti-abuse and bot-challenge controls.',
+  fields: [],
+  children: [
+    {
+      key: 'captcha',
+      label: 'Captcha',
+      hint: 'Cloudflare Turnstile settings. When disabled (default), no challenge is required anywhere.',
+      fields: [
+        {
+          key: 'captcha.turnstile_enabled',
+          label: 'Enable Turnstile',
+          desc: 'When enabled, the login, register, email-verify and admin-login endpoints require a solved Turnstile challenge.',
+          type: 'switch',
+        },
+        {
+          key: 'captcha.turnstile_site_key',
+          label: 'Site Key',
+          desc: 'Public Turnstile widget key (rendered in the user SPA).',
+          type: 'text',
+        },
+        {
+          key: 'captcha.turnstile_secret_key',
+          label: 'Secret Key',
+          desc: 'Server-side secret used to verify challenge tokens with Cloudflare. Keep this confidential.',
+          type: 'text',
+        },
+      ],
+    },
+  ],
+}
+
+const emailCat: CategoryDef = {
+  key: 'email',
+  label: 'Email',
+  hint: 'SMTP settings for registration verification and admin broadcast emails. Leave disabled if unused.',
+  fields: [],
+  children: [
+    {
+      key: 'smtp',
+      label: 'SMTP',
+      hint: 'Outbound mail server configuration.',
+      fields: [
+        {
+          key: 'email.enabled',
+          label: 'Enable Email',
+          desc: 'When disabled, no outbound mail is sent (verification is skipped at registration).',
+          type: 'switch',
+        },
+        { key: 'email.smtp_host', label: 'SMTP Host', type: 'text' },
+        { key: 'email.smtp_port', label: 'SMTP Port', desc: '587 (starttls) / 465 (ssl) / 25 (none)', type: 'number' },
+        {
+          key: 'email.smtp_security',
+          label: 'Security',
+          type: 'select',
+          options: [
+            { label: 'none', value: 'none' },
+            { label: 'starttls', value: 'starttls' },
+            { label: 'ssl', value: 'ssl' },
+          ],
+        },
+        { key: 'email.smtp_user', label: 'SMTP User', desc: 'Empty = no authentication', type: 'text' },
+        { key: 'email.smtp_pass', label: 'SMTP Password', type: 'textarea' },
+        { key: 'email.smtp_from', label: 'From Address', type: 'text' },
+      ],
+    },
+    {
+      key: 'verification',
+      label: 'Verification',
+      hint: 'Email-verification link construction (used at registration).',
+      fields: [
+        {
+          key: 'app.user_base_url',
+          label: 'User Base URL',
+          desc: 'Public base URL of the user SPA (e.g. https://user.example.com). Used to build the clickable email-verification link; leave empty to send the raw token only.',
+          type: 'text',
+        },
+      ],
+    },
+  ],
+}
+
+const alipayCat: CategoryDef = {
+  key: 'alipay',
+  label: 'Alipay',
+  hint: 'Alipay credentials and callback URLs; leave empty if unused.',
+  fields: [
+    { key: 'alipay.app_id', label: 'App ID', type: 'text' },
+    { key: 'alipay.private_key', label: 'App Private Key', type: 'textarea' },
+    { key: 'alipay.public_key', label: 'Alipay Public Key', type: 'textarea' },
+    { key: 'alipay.notify_url', label: 'Notify URL', type: 'text' },
+    { key: 'alipay.return_url', label: 'Return URL', type: 'text' },
+    { key: 'alipay.sandbox', label: 'Sandbox Mode', desc: 'Use Alipay sandbox environment when enabled', type: 'switch' },
+  ],
+}
+
+const paymentCat: CategoryDef = {
+  key: 'payment',
+  label: 'Payment',
+  hint: 'Payment provider configuration (Alipay, etc.).',
+  fields: [], // parent has no direct fields
+  children: [alipayCat], // Alipay becomes a sub-tab
+}
+
+const subscriptionCat: CategoryDef = {
+  key: 'subscription',
+  label: 'Subscription',
+  hint: 'Subscription link distribution. Applied immediately after save.',
+  fields: [
+    {
+      key: 'sub.base_urls',
+      label: 'Subscription Base URLs',
+      desc: 'One base URL (origin, no path) per line, e.g. https://sub.example.com. Each time a user opens their subscription, a random entry is used to build the share/QR link (load distribution / anti-blocking). Leave empty to fall back to the request origin.',
+      type: 'lines',
+    },
+  ],
+}
+
+const categories: CategoryDef[] = [systemCat, usersCat, securityCat, emailCat, paymentCat, subscriptionCat]
+
+// Default the active sub-tab of each parent category to its first child, so
+// clicking a parent tab (e.g. Payment) opens its first sub-tab.
+const subActive = reactive<Record<string, string>>({})
+for (const c of categories) {
+  if (c.children?.length) subActive[c.key] = c.children[0].key
+}
+
+const rows = ref<ConfigRow[]>([])
+const loading = ref(false)
+const saving = ref(false)
+const activeTab = ref<string>(categories[0].key)
+
+function rowFor(key: string): ConfigRow | undefined {
+  return rows.value.find((r) => r.key === key)
+}
+
+// Read a field's value converted to the control's expected type.
+function fieldValue(f: FieldDef): any {
+  const row = rowFor(f.key)
+  if (!row) return f.type === 'number' ? 0 : f.type === 'switch' ? false : f.type === 'tags' ? [] : ''
+  switch (f.type) {
+    case 'number':
+      return parseInt(row.value, 10) || 0
+    case 'switch':
+      return row.value === 'true'
+    case 'tags':
+      try {
+        const v = JSON.parse(row.value)
+        return Array.isArray(v) ? v : []
+      } catch {
+        return []
+      }
+    case 'lines':
+      // r.value is either the stored JSON array (after load) or raw text
+      // (during editing). Return newline-joined text either way; if it isn't a
+      // JSON array, treat it as raw text so trailing newlines aren't lost.
+      try {
+        const v = JSON.parse(row.value)
+        if (Array.isArray(v)) return v.join('\n')
+      } catch {
+        /* not JSON → raw text being edited */
+      }
+      return row.value
+    default:
+      return row.value
+  }
+}
+
+// Write a control value back as the stored string.
+function setFieldValue(f: FieldDef, val: any) {
+  let row = rowFor(f.key)
+  if (!row) {
+    row = { key: f.key, value: '' }
+    rows.value.push(row)
+  }
+  switch (f.type) {
+    case 'number':
+      row.value = String(val ?? 0)
+      break
+    case 'switch':
+      row.value = val ? 'true' : 'false'
+      break
+    case 'tags':
+      row.value = JSON.stringify(val ?? [])
+      break
+    case 'lines':
+      // Store the raw multiline text while editing so the textarea keeps
+      // trailing newlines (pressing Enter works naturally). It is normalized
+      // into a JSON array only at save time (see saveAll).
+      row.value = String(val ?? '')
+      break
+    default:
+      row.value = val
+  }
+}
+
+async function load() {
+  loading.value = true
+  try {
+    const { data } = await apiSystem.get()
+    const next: Record<string, string> = { ...data }
+
+    // Ensure all known fields appear in the form so admins can discover and
+    // edit them even before they have a value (nested children included).
+    for (const cat of categories) {
+      const all = cat.children ? [...cat.fields, ...cat.children.flatMap((c) => c.fields)] : cat.fields
+      for (const f of all) {
+        if (!(f.key in next)) next[f.key] = ''
+      }
+    }
+    rows.value = Object.entries(next).map(([k, v]) => ({ key: k, value: v }))
+  } finally {
+    loading.value = false
+  }
+}
+onMounted(load)
+
+async function saveAll() {
+  // Build a key → field-def map so we can normalize the `lines` fields (which
+  // hold raw multiline text during editing) into the JSON array the backend
+  // expects, while passing every other field through unchanged.
+  const fieldByKey: Record<string, FieldDef> = {}
+  for (const cat of categories) {
+    const all = cat.children ? [...cat.fields, ...cat.children.flatMap((c) => c.fields)] : cat.fields
+    for (const f of all) fieldByKey[f.key] = f
+  }
+
+  const map: Record<string, string> = {}
+  for (const r of rows.value) {
+    if (!r.key.trim()) continue
+    const def = fieldByKey[r.key.trim()]
+    if (def?.type === 'lines') {
+      // Already a JSON array (loaded but not edited) → keep as-is. Otherwise
+      // normalize the raw multiline text: split, trim, drop empty lines.
+      let normalized = r.value
+      try {
+        const parsed = JSON.parse(r.value)
+        if (!Array.isArray(parsed)) normalized = JSON.stringify([])
+      } catch {
+        normalized = JSON.stringify(
+          r.value.split('\n').map((s) => s.trim()).filter((s) => s.length > 0),
+        )
+      }
+      map[r.key.trim()] = normalized
+    } else {
+      map[r.key.trim()] = r.value
+    }
+  }
+  saving.value = true
+  try {
+    await apiSystem.update(map)
+    ElMessage.success('Config saved')
+    load()
+  } finally {
+    saving.value = false
+  }
+}
+</script>
+
+<template>
+  <div>
+    <h2 style="margin: 0 0 16px">System Config</h2>
+    <el-card shadow="never">
+      <el-alert
+        type="info"
+        title="System config is upsert-only. Deleting keys is not supported in v1."
+        :closable="false"
+        show-icon
+        style="margin-bottom: 12px"
+      />
+
+      <el-tabs v-model="activeTab" v-loading="loading">
+        <!-- Parent config tabs (System, Users, Security, Email, Payment): each
+             renders nested sub-tabs via `children`. New categories only need an
+             entry in the `categories` array. -->
+        <el-tab-pane v-for="cat in categories" :key="cat.key" :name="cat.key" :label="cat.label">
+          <el-text type="info" size="small">{{ cat.hint }}</el-text>
+
+          <!-- Parent category: nested sub-tabs (one per child category). -->
+          <el-tabs v-if="cat.children && cat.children.length" v-model="subActive[cat.key]">
+            <el-tab-pane v-for="child in cat.children" :key="child.key" :name="child.key" :label="child.label">
+              <el-text type="info" size="small">{{ child.hint }}</el-text>
+              <el-form label-width="200px" style="margin-top: 12px" @submit.prevent>
+                <el-form-item v-for="f in child.fields" :key="f.key" :label="f.label">
+                  <el-input-number
+                    v-if="f.type === 'number'"
+                    :model-value="fieldValue(f)"
+                    @update:model-value="(v: number | undefined) => setFieldValue(f, v)"
+                    :min="0"
+                    controls-position="right"
+                  />
+                  <el-select
+                    v-else-if="f.type === 'select'"
+                    :model-value="fieldValue(f)"
+                    @update:model-value="(v: string) => setFieldValue(f, v)"
+                    style="width: 240px"
+                  >
+                    <el-option v-for="o in f.options" :key="o.value" :label="o.label" :value="o.value" />
+                  </el-select>
+                  <el-switch
+                    v-else-if="f.type === 'switch'"
+                    :model-value="fieldValue(f)"
+                    @update:model-value="(v: string | number | boolean) => setFieldValue(f, v)"
+                  />
+                  <TagListInput
+                    v-else-if="f.type === 'tags'"
+                    :model-value="fieldValue(f)"
+                    @update:model-value="(v: string[]) => setFieldValue(f, v)"
+                    placeholder="domain, press Enter to add"
+                  />
+                  <el-input
+                    v-else-if="f.type === 'lines'"
+                    type="textarea"
+                    :rows="4"
+                    :model-value="fieldValue(f)"
+                    @update:model-value="(v: string) => setFieldValue(f, v)"
+                    :placeholder="'https://sub1.example.com\nhttps://sub2.example.com'"
+                    style="max-width: 560px"
+                  />
+                  <el-input
+                    v-else-if="f.type === 'textarea'"
+                    type="textarea"
+                    :rows="3"
+                    :model-value="fieldValue(f)"
+                    @update:model-value="(v: string) => setFieldValue(f, v)"
+                    style="max-width: 560px"
+                  />
+                  <el-input
+                    v-else
+                    :model-value="fieldValue(f)"
+                    @update:model-value="(v: string) => setFieldValue(f, v)"
+                    style="max-width: 560px"
+                  />
+                  <div v-if="f.desc" class="label-desc">
+                    <el-text type="info" size="small">{{ f.desc }}</el-text>
+                  </div>
+                </el-form-item>
+              </el-form>
+            </el-tab-pane>
+          </el-tabs>
+
+          <!-- Leaf category: single-level form. -->
+          <el-form v-else label-width="200px" style="margin-top: 12px" @submit.prevent>
+            <el-form-item v-for="f in cat.fields" :key="f.key" :label="f.label">
+              <el-input-number
+                v-if="f.type === 'number'"
+                :model-value="fieldValue(f)"
+                @update:model-value="(v: number | undefined) => setFieldValue(f, v)"
+                :min="0"
+                controls-position="right"
+              />
+              <el-select
+                v-else-if="f.type === 'select'"
+                :model-value="fieldValue(f)"
+                @update:model-value="(v: string) => setFieldValue(f, v)"
+                style="width: 240px"
+              >
+                <el-option v-for="o in f.options" :key="o.value" :label="o.label" :value="o.value" />
+              </el-select>
+              <el-switch
+                v-else-if="f.type === 'switch'"
+                :model-value="fieldValue(f)"
+                @update:model-value="(v: string | number | boolean) => setFieldValue(f, v)"
+              />
+              <TagListInput
+                v-else-if="f.type === 'tags'"
+                :model-value="fieldValue(f)"
+                @update:model-value="(v: string[]) => setFieldValue(f, v)"
+                placeholder="domain, press Enter to add"
+              />
+              <el-input
+                v-else-if="f.type === 'lines'"
+                type="textarea"
+                :rows="4"
+                :model-value="fieldValue(f)"
+                @update:model-value="(v: string) => setFieldValue(f, v)"
+                :placeholder="'https://sub1.example.com\nhttps://sub2.example.com'"
+                style="max-width: 560px"
+              />
+              <el-input
+                v-else-if="f.type === 'textarea'"
+                type="textarea"
+                :rows="3"
+                :model-value="fieldValue(f)"
+                @update:model-value="(v: string) => setFieldValue(f, v)"
+                style="max-width: 560px"
+              />
+              <el-input
+                v-else
+                :model-value="fieldValue(f)"
+                @update:model-value="(v: string) => setFieldValue(f, v)"
+                style="max-width: 560px"
+              />
+              <div v-if="f.desc" class="label-desc">
+                <el-text type="info" size="small">{{ f.desc }}</el-text>
+              </div>
+            </el-form-item>
+          </el-form>
+        </el-tab-pane>
+      </el-tabs>
+
+      <div style="margin-top: 12px; display: flex; gap: 8px">
+        <el-button type="primary" native-type="button" :loading="saving" @click="saveAll">Save All</el-button>
+      </div>
+    </el-card>
+  </div>
+</template>
+
+<style scoped>
+.el-form {
+  padding-top: 4px;
+}
+.el-form-item {
+  margin-bottom: 26px;
+}
+.el-form-item:last-child {
+  margin-bottom: 8px;
+}
+.el-divider {
+  margin: 28px 0 22px;
+}
+.label-desc {
+  margin-top: 6px;
+  margin-left: 10px;
+}
+</style>
