@@ -1,9 +1,22 @@
 import http from './http'
 import type { User, UserWithSubToken, UserRequest, Node, Page } from '@/types/api'
 
+export interface UserListParams {
+  search?: string
+  enabled?: '' | 'true' | 'false'
+  sort_by?: string
+  order?: 'asc' | 'desc'
+}
+
 export const apiUsers = {
-  list: (page = 1, pageSize = 20) =>
-    http.get<Page<User>>('/admin/users', { params: { page, page_size: pageSize } }),
+  list: (page = 1, pageSize = 20, params: UserListParams = {}) => {
+    const query: Record<string, unknown> = { page, page_size: pageSize }
+    if (params.search) query.search = params.search
+    if (params.enabled !== undefined && params.enabled !== '') query.enabled = params.enabled
+    if (params.sort_by) query.sort_by = params.sort_by
+    if (params.order) query.order = params.order
+    return http.get<Page<User>>('/admin/users', { params: query })
+  },
   create: (b: UserRequest) => http.post<UserWithSubToken>('/admin/users', b),
   get: (id: string) => http.get<User>(`/admin/users/${id}`),
   update: (id: string, b: UserRequest) => http.put<User>(`/admin/users/${id}`, b),

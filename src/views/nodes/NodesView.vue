@@ -30,6 +30,9 @@ const childParentId = ref<string | null>(null)
 
 function parentNameOf(row: Node): string {
   if (!row.parent_id) return '—'
+  // Prefer the server-provided parent name (correct across pagination); fall
+  // back to the current page's nodes only if the backend did not send it.
+  if (row.parent_name) return row.parent_name
   const p = nodes.value.find((n) => n.id === row.parent_id)
   return p ? p.name : '(unknown)'
 }
@@ -197,11 +200,11 @@ async function copyId(id: string) {
         <el-table-column label="ID" width="110">
           <template #default="{ row }">
             <el-tooltip :content="row.id" placement="top" :hide-after="0">
-              <span class="id-cell" @click="copyId(row.id)">{{ row.id.slice(0, 8) }}</span>
+              <span class="id-cell" @click="copyId(row.id)">{{ row.id.slice(-8) }}</span>
             </el-tooltip>
           </template>
         </el-table-column>
-        <el-table-column prop="name" label="Name" min-width="100" />
+        <el-table-column prop="name" label="Name" min-width="120" />
         <el-table-column label="Type" width="110">
           <template #default="{ row }">
             <el-tag v-if="row.parent_id" type="warning" size="small">Virtual</el-tag>

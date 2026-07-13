@@ -24,6 +24,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'orders', name: 'orders', component: () => import('@/views/orders/OrdersView.vue'), meta: { requiresAuth: true } },
       { path: 'settings', name: 'settings', component: () => import('@/views/SettingsView.vue'), meta: { requiresAuth: true } },
       { path: 'invites', name: 'invites', component: () => import('@/views/invites/InviteCodesView.vue'), meta: { requiresAuth: true } },
+      { path: 'redemption-codes', name: 'redemption-codes', component: () => import('@/views/redemption/RedemptionCodesView.vue'), meta: { requiresAuth: true } },
       { path: 'announcements', name: 'announcements', component: () => import('@/views/announcements/AnnouncementsView.vue'), meta: { requiresAuth: true } },
       { path: 'email', name: 'email', component: () => import('@/views/email/EmailView.vue'), meta: { requiresAuth: true } },
     ],

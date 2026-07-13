@@ -5,6 +5,7 @@ import { apiNodes } from '@/api/nodes'
 import { formatBytes, formatPrice, formatRelative } from '@/utils/format'
 import type { HourlyStat, Node } from '@/types/api'
 import router from "@/router";
+import TrafficBarChart from '@/components/TrafficBarChart.vue'
 
 const nodeCount = ref(0)
 const onlineCount = ref(0)
@@ -32,21 +33,6 @@ const up24hPrev = ref(0)
 const down24hPrev = ref(0)
 const onlineUsers24hPrev = ref(0)
 const orderCount24hPrev = ref(0)
-
-const maxTotal = computed(() =>
-  Math.max(...series.value.map((p) => p.up + p.down), 1),
-)
-function barHeightPct(p: HourlyStat) {
-  return ((p.up + p.down) / maxTotal.value) * 100
-}
-function segPct(part: number, p: HourlyStat) {
-  const t = p.up + p.down
-  return t > 0 ? (part / t) * 100 : 0
-}
-function formatHour(iso: string) {
-  const d = new Date(iso)
-  return `${String(d.getHours()).padStart(2, '0')}:00`
-}
 
 // trend returns a day-over-day direction and percentage given the current and
 // previous-24h value. dir is 'up' | 'down' | 'flat'.
@@ -215,31 +201,7 @@ onMounted(async () => {
     <el-row :gutter="16" class="bottom-row">
       <el-col :span="12">
         <el-card shadow="never" class="chart-card">
-          <div class="chart-header">
-            <span class="chart-title">Hourly Traffic (24h)</span>
-            <div class="chart-legend">
-              <span class="legend-item"><i class="legend-dot up"></i>Upload</span>
-              <span class="legend-item"><i class="legend-dot down"></i>Download</span>
-            </div>
-          </div>
-          <div class="chart-bars">
-            <div
-              v-for="p in series"
-              :key="p.hour"
-              class="bar-col"
-              :title="`${formatHour(p.hour)} · ↑${formatBytes(p.up)} ↓${formatBytes(p.down)}`"
-            >
-              <div class="bar" :style="{ height: barHeightPct(p) + '%' }">
-                <div class="bar-seg up" :style="{ height: segPct(p.up, p) + '%' }"></div>
-                <div class="bar-seg down" :style="{ height: segPct(p.down, p) + '%' }"></div>
-              </div>
-            </div>
-          </div>
-          <div class="chart-axis">
-            <span v-for="(p, i) in series" :key="'a' + p.hour" class="axis-label">
-              {{ i % 6 === 0 ? formatHour(p.hour) : '' }}
-            </span>
-          </div>
+          <TrafficBarChart :data="series" />
         </el-card>
       </el-col>
       <el-col :span="12">
@@ -248,7 +210,7 @@ onMounted(async () => {
             <span class="chart-title">Node Status</span>
             <span class="node-count">{{ nodes.length }} / {{ nodeTotal }}</span>
           </div>
-          <el-table :data="nodes" size="small" empty-text="No nodes">
+          <el-table :data="nodes" size="small" empty-text="No nodes" max-height="220">
             <el-table-column label="Name" min-width="160">
               <template #default="{ row }">
                 <span class="node-name">{{ row.name }}</span>
@@ -360,69 +322,6 @@ onMounted(async () => {
   font-size: 14px;
   font-weight: 600;
   color: #303133;
-}
-.chart-legend {
-  display: flex;
-  gap: 12px;
-}
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: #909399;
-}
-.legend-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-}
-.legend-dot.up {
-  background: #409eff;
-}
-.legend-dot.down {
-  background: #67c23a;
-}
-.chart-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 2px;
-  height: 140px;
-}
-.bar-col {
-  flex: 1;
-  height: 100%;
-  display: flex;
-  align-items: flex-end;
-  cursor: pointer;
-}
-.bar {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  border-radius: 2px 2px 0 0;
-  min-height: 2px;
-  overflow: hidden;
-}
-.bar-seg {
-  width: 100%;
-}
-.bar-seg.up {
-  background: #409eff;
-}
-.bar-seg.down {
-  background: #67c23a;
-}
-.chart-axis {
-  display: flex;
-  margin-top: 4px;
-}
-.axis-label {
-  flex: 1;
-  text-align: center;
-  font-size: 10px;
-  color: #909399;
 }
 .el-card:hover {
   cursor: pointer;

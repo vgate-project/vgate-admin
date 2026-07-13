@@ -13,6 +13,7 @@ import {
   Odometer,
   Promotion,
   Setting,
+  Ticket,
   Tickets,
   User,
   UserFilled
@@ -62,6 +63,10 @@ function onLogout() {
         <el-menu-item index="/invites">
           <el-icon><Promotion /></el-icon>
           <template #title>Invite Codes</template>
+        </el-menu-item>
+        <el-menu-item index="/redemption-codes">
+          <el-icon><Ticket /></el-icon>
+          <template #title>Redemption Codes</template>
         </el-menu-item>
         <el-menu-item v-if="auth.isSuperAdmin" index="/admins">
           <el-icon><UserFilled /></el-icon>

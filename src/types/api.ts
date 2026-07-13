@@ -50,6 +50,7 @@ export interface Node {
   id: string
   name: string
   parent_id?: string | null
+  parent_name?: string | null
   address: string
   port: number
   network: Network
@@ -155,6 +156,44 @@ export interface InviteRequest {
   max_uses?: number
   expires_at?: string | null
   note?: string
+}
+
+// --- Redemption codes ---
+export type RedeemType = 'traffic' | 'duration' | 'plan' | 'reset'
+
+export interface RedemptionCode {
+  id: string
+  code: string
+  type: RedeemType
+  max_uses: number
+  used_count: number
+  expires_at?: string | null
+  note?: string
+  quota_bytes?: number
+  duration_days?: number
+  plan_id?: string | null
+  created_by_admin_id?: number | null
+  created_at: string
+  updated_at: string
+}
+
+export interface GenerateRedemptionRequest {
+  type: RedeemType
+  quota_bytes?: number
+  duration_days?: number
+  plan_id?: string
+  max_uses?: number
+  expires_at?: string | null
+  count: number
+  note?: string
+}
+
+export interface RedemptionRecord {
+  id: string
+  code_id: string
+  user_id: string
+  type: RedeemType
+  redeemed_at: string
 }
 
 // --- Announcements ---
