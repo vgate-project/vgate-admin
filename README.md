@@ -17,13 +17,13 @@ config. It talks to the manager's REST API under `/api/v1`.
 ## Prerequisites
 
 - Node.js **18+**
-- A package manager — `npm` or `pnpm` (lockfiles for both are present)
+- A package manager — `npm` (this project ships `package-lock.json`)
 
 ## Getting started
 
 ```bash
 # install dependencies
-npm install          # or: pnpm install
+npm install
 
 # start the dev server (http://localhost:5173)
 npm run dev
