@@ -4,6 +4,9 @@ Web admin console for **VGate**, built with Vue 3 + Vite + TypeScript. Operators
 it to manage proxy nodes, users, plans, orders, traffic, announcements, and system
 config. It talks to the manager's REST API under `/api/v1`.
 
+The **System Config → Payment** page configures the gateways (Alipay, WeChat Pay, Stripe)
+used when operators or users create paid orders.
+
 ## Tech stack
 
 - [Vue 3](https://vuejs.org/) (Composition API, `<script setup>`)
