@@ -284,12 +284,39 @@ const alipayCat: CategoryDef = {
   ],
 }
 
+const wechatCat: CategoryDef = {
+  key: 'wechat',
+  label: 'WeChat Pay',
+  hint: 'WeChat Pay v3 (NATIVE) credentials; leave empty if unused.',
+  fields: [
+    { key: 'wechat.app_id', label: 'App ID', type: 'text' },
+    { key: 'wechat.mch_id', label: 'Merchant ID (mchid)', type: 'text' },
+    { key: 'wechat.api_v3_key', label: 'APIv3 Key', type: 'text' },
+    { key: 'wechat.serial_no', label: 'API Certificate Serial No', type: 'text' },
+    { key: 'wechat.private_key', label: 'Merchant Private Key (apiclient_key.pem)', type: 'textarea' },
+    { key: 'wechat.notify_url', label: 'Notify URL', type: 'text' },
+  ],
+}
+
+const stripeCat: CategoryDef = {
+  key: 'stripe',
+  label: 'Stripe',
+  hint: 'Stripe Checkout credentials; leave empty if unused.',
+  fields: [
+    { key: 'stripe.secret_key', label: 'Secret Key', type: 'text' },
+    { key: 'stripe.webhook_secret', label: 'Webhook Signing Secret', type: 'text' },
+    { key: 'stripe.success_url', label: 'Success Redirect URL', type: 'text' },
+    { key: 'stripe.cancel_url', label: 'Cancel Redirect URL', type: 'text' },
+    { key: 'stripe.currency', label: 'Currency', desc: 'ISO currency, e.g. cny; defaults to cny when empty.', type: 'text' },
+  ],
+}
+
 const paymentCat: CategoryDef = {
   key: 'payment',
   label: 'Payment',
-  hint: 'Payment provider configuration (Alipay, etc.).',
+  hint: 'Payment provider configuration (Alipay / WeChat Pay / Stripe).',
   fields: [], // parent has no direct fields
-  children: [alipayCat], // Alipay becomes a sub-tab
+  children: [alipayCat, wechatCat, stripeCat], // become sub-tabs
 }
 
 const subscriptionCat: CategoryDef = {

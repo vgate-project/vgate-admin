@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import {onMounted, ref} from 'vue'
+import {ElMessage, ElMessageBox} from 'element-plus'
 import {apiOrders} from '@/api/orders'
 import {apiPlans} from '@/api/plans'
 import {apiTrafficPackages} from '@/api/traffic'
 import type {Order, OrderStatus} from '@/types/api'
 import {formatDateTime, formatPrice} from '@/utils/format'
 import AdminCreateOrderDialog from './AdminCreateOrderDialog.vue'
-import CopyableTokenDialog from '@/components/CopyableTokenDialog.vue'
+import PaymentDialog from '@/components/PaymentDialog.vue'
 
 const orders = ref<Order[]>([])
 const loading = ref(false)
@@ -28,6 +29,11 @@ const createVisible = ref(false)
 const tokenDialog = ref(false)
 const tokenTitle = ref('Alipay Pay URL')
 const tokenItems = ref<{ label: string; value: string; mono?: boolean }[]>([])
+
+// Payment result dialog (QR for wechat, copyable link for alipay/stripe).
+const payVisible = ref(false)
+const payUrl = ref('')
+const payMode = ref<'redirect' | 'qr'>('redirect')
 
 async function loadPlans() {
   try {
@@ -113,12 +119,30 @@ function statusTag(status: OrderStatus): 'warning' | 'success' | 'info' {
   return 'info'
 }
 
-function onOrderCreated(payUrl: string) {
-  tokenItems.value = [
-    {label: 'Alipay Pay URL (send to the user to pay)', value: payUrl, mono: true},
-  ]
-  tokenDialog.value = true
+function onOrderCreated(url: string, payModeValue?: string) {
+  payUrl.value = url
+  payMode.value = payModeValue === 'qr' ? 'qr' : 'redirect'
+  payVisible.value = true
   load()
+}
+
+// Admin manual status change. Only pending orders are editable; choosing
+// "paid" grants the purchase effect, "closed" cancels it.
+async function onStatusChange(row: Order, status: Exclude<OrderStatus, 'pending'>) {
+  const verb = status === 'paid' ? 'mark this order as PAID (grants the benefit)' : 'CLOSE this order'
+  try {
+    await ElMessageBox.confirm(`Confirm to ${verb} for user ${row.user_id}?`, 'Confirm', { type: 'warning' })
+  } catch {
+    return
+  }
+  try {
+    const { data } = await apiOrders.updateStatus(row.id, status)
+    Object.assign(row, data)
+    ElMessage.success('Order status updated')
+  } catch {
+    /* reload to restore the row's real status on failure */
+    load()
+  }
 }
 </script>
 
@@ -186,9 +210,24 @@ function onOrderCreated(payUrl: string) {
         <el-table-column label="Amount" width="120" prop="amount" sortable="custom">
           <template #default="{ row }">{{ formatPrice(row.amount) }}</template>
         </el-table-column>
-        <el-table-column label="Status" width="100" prop="status" sortable="custom">
+        <el-table-column label="Status" width="130" prop="status" sortable="custom">
           <template #default="{ row }">
-            <el-tag :type="statusTag(row.status)" size="small">{{ row.status }}</el-tag>
+            <el-select
+              v-if="row.status === 'pending'"
+              :model-value="row.status"
+              size="small"
+              @update:model-value="(v: OrderStatus) => onStatusChange(row as Order, v as Exclude<OrderStatus, 'pending'>)"
+            >
+              <el-option label="Pending" value="pending" disabled />
+              <el-option label="Paid" value="paid" />
+              <el-option label="Closed" value="closed" />
+            </el-select>
+            <el-tag v-else :type="statusTag(row.status)" size="small">{{ row.status }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="Platform" width="100" prop="platform">
+          <template #default="{ row }">
+            <el-tag size="small" effect="plain">{{ row.platform || 'alipay' }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="channel" label="Channel" width="90"/>
@@ -213,11 +252,11 @@ function onOrderCreated(payUrl: string) {
 
     <AdminCreateOrderDialog v-model="createVisible" @created="onOrderCreated"/>
 
-    <CopyableTokenDialog
-        v-model="tokenDialog"
-        :title="tokenTitle"
-        :items="tokenItems"
-        warning="This is the alipay payment URL for the user — send it to them to complete payment."
+    <PaymentDialog
+        v-model="payVisible"
+        :pay-url="payUrl"
+        :pay-mode="payMode"
+        title="Order payment"
     />
   </div>
 </template>

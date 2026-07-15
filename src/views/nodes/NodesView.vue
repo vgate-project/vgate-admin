@@ -7,13 +7,14 @@ import { formatRelative, formatDateTime } from '@/utils/format'
 import NodeEditorDialog from './NodeEditorDialog.vue'
 import NodeUsersDialog from './NodeUsersDialog.vue'
 import CopyableTokenDialog from '@/components/CopyableTokenDialog.vue'
-import {Plus, ArrowDown} from "@element-plus/icons-vue";
+import {Plus, ArrowDown, Right} from "@element-plus/icons-vue";
 
 const nodes = ref<Node[]>([])
 const loading = ref(false)
 const page = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
+const typeFilter = ref<'all' | 'real' | 'virtual'>('all')
 
 const editorVisible = ref(false)
 const editingNode = ref<Node | null>(null)
@@ -57,7 +58,7 @@ const emptyText = computed(() =>
 async function load() {
   loading.value = true
   try {
-    const { data } = await apiNodes.list(page.value, pageSize.value)
+    const { data } = await apiNodes.list(page.value, pageSize.value, typeFilter.value)
     nodes.value = data.items
     total.value = data.total
   } finally {
@@ -67,6 +68,11 @@ async function load() {
 onMounted(load)
 
 function onSizeChange() {
+  page.value = 1
+  load()
+}
+
+function onTypeChange() {
   page.value = 1
   load()
 }
@@ -186,9 +192,16 @@ async function copyId(id: string) {
   <div>
     <div class="toolbar">
       <h2>Nodes</h2>
-      <el-button type="primary" @click="openCreate">
-        <el-icon><Plus /></el-icon><span>New Node</span>
-      </el-button>
+      <div class="toolbar-right">
+        <el-radio-group v-model="typeFilter" size="small" @change="onTypeChange">
+          <el-radio-button value="all">All</el-radio-button>
+          <el-radio-button value="real">Real</el-radio-button>
+          <el-radio-button value="virtual">Virtual</el-radio-button>
+        </el-radio-group>
+        <el-button type="primary" @click="openCreate">
+          <el-icon><Plus /></el-icon><span>New Node</span>
+        </el-button>
+      </div>
     </div>
     <el-card shadow="never">
       <el-table
@@ -204,7 +217,14 @@ async function copyId(id: string) {
             </el-tooltip>
           </template>
         </el-table-column>
-        <el-table-column prop="name" label="Name" min-width="120" />
+        <el-table-column prop="name" label="Name" min-width="140">
+          <template #default="{ row }">
+            <span v-if="row.parent_id" class="virtual-name">
+              <el-icon class="virtual-caret"><Right /></el-icon>{{ row.name }}
+            </span>
+            <span v-else>{{ row.name }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="Type" width="110">
           <template #default="{ row }">
             <el-tag v-if="row.parent_id" type="warning" size="small">Virtual</el-tag>
@@ -305,6 +325,22 @@ async function copyId(id: string) {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
+}
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.virtual-name {
+  display: inline-flex;
+  align-items: center;
+  padding-left: 16px;
+  color: #e6a23c;
+}
+.virtual-caret {
+  margin-right: 4px;
+  font-size: 12px;
+  color: #c0c4cc;
 }
 .muted {
   color: #909399;

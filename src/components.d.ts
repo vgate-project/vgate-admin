@@ -50,6 +50,7 @@ declare module 'vue' {
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
     ElTransfer: typeof import('element-plus/es')['ElTransfer']
     EmptyState: typeof import('./components/EmptyState.vue')['default']
+    PaymentDialog: typeof import('./components/PaymentDialog.vue')['default']
     QuotaInput: typeof import('./components/QuotaInput.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']

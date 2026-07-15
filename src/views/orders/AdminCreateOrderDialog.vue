@@ -9,7 +9,7 @@ import type { Plan, User, TrafficPackage, AdminCreateOrderRequest } from '@/type
 import { formatPrice, formatBytes } from '@/utils/format'
 
 const props = defineProps<{ modelValue: boolean }>()
-const emit = defineEmits<{ 'update:modelValue': [boolean]; created: [string] }>()
+const emit = defineEmits<{ 'update:modelValue': [boolean]; created: [string, string?] }>()
 
 const saving = ref(false)
 const users = ref<User[]>([])
@@ -24,6 +24,7 @@ const form = reactive({
   traffic_package_id: '' as string,
   plan_id: '' as string,
   channel: 'pc' as 'pc' | 'wap',
+  platform: 'alipay' as string,
 })
 
 const PERIOD_LABELS: Record<string, string> = {
@@ -81,6 +82,7 @@ watch(
     form.traffic_package_id = ''
     form.plan_id = ''
     form.channel = 'pc'
+    form.platform = 'alipay'
     ensureData()
   },
 )
@@ -114,6 +116,7 @@ async function onSubmit() {
       plan_id: opt.plan_id,
       plan_price_id: opt.value,
       channel: form.channel,
+      platform: form.platform,
     }
   } else if (form.kind === 'traffic') {
     if (!form.traffic_package_id) {
@@ -125,6 +128,7 @@ async function onSubmit() {
       kind: 'traffic',
       traffic_package_id: form.traffic_package_id,
       channel: form.channel,
+      platform: form.platform,
     }
   } else {
     if (!form.plan_id) {
@@ -136,6 +140,7 @@ async function onSubmit() {
       kind: 'reset',
       plan_id: form.plan_id,
       channel: form.channel,
+      platform: form.platform,
     }
   }
 
@@ -143,7 +148,7 @@ async function onSubmit() {
   try {
     const { data } = await apiOrders.createForUser(body)
     ElMessage.success('Order created')
-    emit('created', data.pay_url)
+    emit('created', data.pay_url, data.pay_mode)
     emit('update:modelValue', false)
   } finally {
     saving.value = false
@@ -225,7 +230,15 @@ function userLabel(u: User): string {
         </el-select>
       </el-form-item>
 
-      <el-form-item label="Channel">
+      <el-form-item label="Platform">
+        <el-select v-model="form.platform" style="width: 100%">
+          <el-option label="Alipay" value="alipay" />
+          <el-option label="WeChat Pay" value="wechat" />
+          <el-option label="Stripe" value="stripe" />
+        </el-select>
+      </el-form-item>
+
+      <el-form-item label="Channel" v-if="form.platform === 'alipay'">
         <el-radio-group v-model="form.channel">
           <el-radio value="pc">PC (page.pay)</el-radio>
           <el-radio value="wap">Mobile (wap.pay)</el-radio>

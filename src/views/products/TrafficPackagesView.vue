@@ -5,6 +5,9 @@ import { apiTrafficPackages } from '@/api/traffic'
 import type { TrafficPackage, TrafficPackageRequest } from '@/types/api'
 import { formatBytes, formatPrice } from '@/utils/format'
 import QuotaInput from '@/components/QuotaInput.vue'
+import { useAuthStore } from '@/stores/auth'
+
+const auth = useAuthStore()
 
 const packages = ref<TrafficPackage[]>([])
 const loading = ref(false)
@@ -86,7 +89,7 @@ async function onDelete(pkg: TrafficPackage) {
   <div>
     <div class="toolbar">
       <h2>Traffic Packages</h2>
-      <el-button type="primary" @click="openCreate">
+      <el-button v-if="auth.isSuperAdmin" type="primary" @click="openCreate">
         <el-icon><Plus /></el-icon><span>New Package</span>
       </el-button>
     </div>
@@ -112,7 +115,7 @@ async function onDelete(pkg: TrafficPackage) {
         </el-table-column>
         <el-table-column label="Actions" width="160" fixed="right">
           <template #default="{ row }">
-            <div class="actions">
+            <div v-if="auth.isSuperAdmin" class="actions">
               <el-button size="small" @click="openEdit(row as TrafficPackage)">Edit</el-button>
               <el-popconfirm title="Delete this package?" @confirm="onDelete(row as TrafficPackage)">
                 <template #reference>
@@ -120,6 +123,7 @@ async function onDelete(pkg: TrafficPackage) {
                 </template>
               </el-popconfirm>
             </div>
+            <span v-else class="muted">—</span>
           </template>
         </el-table-column>
       </el-table>

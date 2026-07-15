@@ -309,8 +309,9 @@ export interface Order {
   validity_days: number
   amount: number // cents
   status: OrderStatus
+  platform?: string // payment gateway: alipay | manual | (future)
   out_trade_no: string
-  alipay_trade_no?: string
+  trade_no?: string
   channel: 'pc' | 'wap'
   paid_at?: string
   expired_at?: string
@@ -324,6 +325,7 @@ export interface CreateOrderRequest {
   plan_price_id?: string
   traffic_package_id?: string
   channel?: 'pc' | 'wap'
+  platform?: string // payment gateway; defaults to alipay
 }
 
 export interface AdminCreateOrderRequest {
@@ -333,9 +335,13 @@ export interface AdminCreateOrderRequest {
   plan_price_id?: string
   traffic_package_id?: string
   channel?: 'pc' | 'wap'
+  platform?: string // payment gateway; defaults to alipay
 }
 
 export interface CreateOrderResponse {
   order: Order
-  pay_url: string // alipay redirect URL (for the payer to open)
+  pay_url: string // redirect URL (alipay/stripe) or QR content (wechat code_url)
+  // How to present pay_url to the user: "redirect" (open in browser) or
+  // "qr" (render pay_url as a QR code to scan, e.g. wechat NATIVE).
+  pay_mode?: 'redirect' | 'qr'
 }

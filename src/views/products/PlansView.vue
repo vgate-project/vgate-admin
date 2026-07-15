@@ -6,6 +6,9 @@ import type { Plan } from '@/types/api'
 import { formatBytes, formatPrice } from '@/utils/format'
 import PlanEditorDialog from './PlanEditorDialog.vue'
 import {Plus} from "@element-plus/icons-vue";
+import { useAuthStore } from '@/stores/auth'
+
+const auth = useAuthStore()
 
 const periodLabels: Record<string, string> = {
   month: 'Monthly',
@@ -58,7 +61,7 @@ async function onDelete(plan: Plan) {
   <div>
     <div class="toolbar">
       <h2>Plans</h2>
-      <el-button type="primary" @click="openCreate">
+      <el-button v-if="auth.isSuperAdmin" type="primary" @click="openCreate">
         <el-icon><Plus /></el-icon><span>New Plan</span>
       </el-button>
     </div>
@@ -101,7 +104,7 @@ async function onDelete(plan: Plan) {
         </el-table-column>
         <el-table-column label="Actions" width="160" fixed="right">
           <template #default="{ row }">
-            <div class="actions">
+            <div v-if="auth.isSuperAdmin" class="actions">
               <el-button size="small" @click="openEdit(row as Plan)">Edit</el-button>
               <el-popconfirm title="Delete this plan?" @confirm="onDelete(row as Plan)">
                 <template #reference>
@@ -109,6 +112,7 @@ async function onDelete(plan: Plan) {
                 </template>
               </el-popconfirm>
             </div>
+            <span v-else class="muted">—</span>
           </template>
         </el-table-column>
       </el-table>
