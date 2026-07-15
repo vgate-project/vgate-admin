@@ -195,16 +195,10 @@ async function onRotateCredential(user: User) {
   ElMessage.success('VLESS credential rotated. Tell the user to re-import their subscription.')
 }
 
-function onSaved(subToken?: string) {
+function onSaved() {
   editorVisible.value = false
   load()
-  if (subToken) {
-    tokenUserId.value = null
-    tokenTitle.value = 'Subscription Token'
-    tokenItems.value = [{label: 'Sub Token (shown once)', value: subToken, mono: true}]
-    tokenWarning.value = 'This value is shown only once — copy it now.'
-    tokenDialog.value = true
-  }
+  ElMessage.success('User saved')
 }
 
 // Map an action dropdown command to its handler.
