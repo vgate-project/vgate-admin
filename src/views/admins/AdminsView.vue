@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { apiAdmins } from '@/api/admins'
 import { useAuthStore } from '@/stores/auth'
 import type { Admin } from '@/types/api'
@@ -80,6 +80,49 @@ async function onChangePwd() {
     pwdSaving.value = false
   }
 }
+
+// Edit dialog (username + role)
+const editVisible = ref(false)
+const editSaving = ref(false)
+const editForm = ref({ id: 0, username: '', role: 'admin' })
+
+function openEdit(admin: Admin) {
+  editForm.value = { id: admin.id, username: admin.username, role: admin.role }
+  editVisible.value = true
+}
+
+async function onUpdate() {
+  if (!editForm.value.username) {
+    ElMessage.error('Username is required')
+    return
+  }
+  editSaving.value = true
+  try {
+    await apiAdmins.update(editForm.value.id, {
+      username: editForm.value.username,
+      role: editForm.value.role,
+    })
+    ElMessage.success('Admin updated')
+    editVisible.value = false
+    load()
+  } finally {
+    editSaving.value = false
+  }
+}
+
+async function onDelete(admin: Admin) {
+  if (admin.id === auth.adminId) return
+  try {
+    await ElMessageBox.confirm(`Delete admin "${admin.username}"? This cannot be undone.`, 'Confirm', {
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+  await apiAdmins.remove(admin.id)
+  ElMessage.success('Admin deleted')
+  load()
+}
 </script>
 
 <template>
@@ -110,9 +153,18 @@ async function onChangePwd() {
           <el-table-column label="Created" width="160">
             <template #default="{ row }">{{ formatDateTime(row.created_at) }}</template>
           </el-table-column>
-          <el-table-column label="Actions" min-width="160" fixed="right">
+          <el-table-column label="Actions" min-width="240" fixed="right">
             <template #default="{ row }">
+              <el-button size="small" @click="openEdit(row as Admin)">Edit</el-button>
               <el-button size="small" @click="openChangePwd(row as Admin)">Change Password</el-button>
+              <el-button
+                size="small"
+                type="danger"
+                :disabled="row.id === auth.adminId"
+                @click="onDelete(row as Admin)"
+              >
+                Delete
+              </el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -160,6 +212,25 @@ async function onChangePwd() {
         <template #footer>
           <el-button @click="pwdVisible = false">Cancel</el-button>
           <el-button type="primary" :loading="pwdSaving" @click="onChangePwd">Save</el-button>
+        </template>
+      </el-dialog>
+
+      <!-- Edit dialog (username + role) -->
+      <el-dialog v-model="editVisible" title="Edit Admin" width="400px">
+        <el-form label-width="120px">
+          <el-form-item label="Username" required>
+            <el-input v-model="editForm.username" />
+          </el-form-item>
+          <el-form-item label="Role">
+            <el-select v-model="editForm.role">
+              <el-option label="admin" value="admin" />
+              <el-option label="super_admin" value="super_admin" />
+            </el-select>
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="editVisible = false">Cancel</el-button>
+          <el-button type="primary" :loading="editSaving" @click="onUpdate">Save</el-button>
         </template>
       </el-dialog>
     </template>

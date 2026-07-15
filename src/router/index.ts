@@ -17,7 +17,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'nodes', name: 'nodes', component: () => import('@/views/nodes/NodesView.vue'), meta: { requiresAuth: true } },
       { path: 'users', name: 'users', component: () => import('@/views/users/UsersView.vue'), meta: { requiresAuth: true } },
       { path: 'traffic', name: 'traffic', component: () => import('@/views/traffic/TrafficView.vue'), meta: { requiresAuth: true } },
-      { path: 'system-config', name: 'system-config', component: () => import('@/views/system/SystemConfigView.vue'), meta: { requiresAuth: true } },
+      { path: 'system-config', name: 'system-config', component: () => import('@/views/system/SystemConfigView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
       { path: 'admins', name: 'admins', component: () => import('@/views/admins/AdminsView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
       { path: 'plans', name: 'plans', component: () => import('@/views/products/ProductsView.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
       { path: 'traffic-packages', redirect: 'plans', meta: { requiresAuth: true, requiresSuperAdmin: true } },

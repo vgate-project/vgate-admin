@@ -17,6 +17,7 @@ export const useAuthStore = defineStore('auth', {
     token: '' as string,
     refreshToken: '' as string,
     expiresAt: '' as string,
+    adminId: 0 as number,
     username: '' as string,
     role: '' as '' | 'admin' | 'super_admin',
   }),
@@ -46,6 +47,7 @@ export const useAuthStore = defineStore('auth', {
       this.token = ''
       this.refreshToken = ''
       this.expiresAt = ''
+      this.adminId = 0
       this.username = ''
       this.role = ''
       localStorage.removeItem(AUTH_STORAGE_KEY)
@@ -73,6 +75,7 @@ export const useAuthStore = defineStore('auth', {
     },
     applyClaims(token: string) {
       const c = decodeJwtPayload<JwtClaims>(token)
+      this.adminId = c.admin_id ?? 0
       this.username = c.username ?? ''
       this.role = c.role ?? ''
     },

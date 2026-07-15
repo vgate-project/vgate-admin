@@ -88,7 +88,7 @@ function onLogout() {
           <el-icon><Tickets /></el-icon>
           <template #title>Orders</template>
         </el-menu-item>
-        <el-menu-item index="/system-config">
+        <el-menu-item v-if="auth.isSuperAdmin" index="/system-config">
           <el-icon><Setting /></el-icon>
           <template #title>System Config</template>
         </el-menu-item>
