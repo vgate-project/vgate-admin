@@ -29,15 +29,6 @@ const tokenWarning = ref('')
 // When set, the editor opens in virtual-child mode preset to this parent.
 const childParentId = ref<string | null>(null)
 
-function parentNameOf(row: Node): string {
-  if (!row.parent_id) return '—'
-  // Prefer the server-provided parent name (correct across pagination); fall
-  // back to the current page's nodes only if the backend did not send it.
-  if (row.parent_name) return row.parent_name
-  const p = nodes.value.find((n) => n.id === row.parent_id)
-  return p ? p.name : '(unknown)'
-}
-
 // Node config file: displayed (and copyable) on click, built from the node
 // payload the admin already has — no backend round-trip.
 const configDialog = ref(false)
@@ -219,9 +210,15 @@ async function copyId(id: string) {
         </el-table-column>
         <el-table-column prop="name" label="Name" min-width="140">
           <template #default="{ row }">
-            <span v-if="row.parent_id" class="virtual-name">
-              <el-icon class="virtual-caret"><Right /></el-icon>{{ row.name }}
-            </span>
+            <el-tooltip v-if="row.parent_id" placement="top" :hide-after="0">
+              <span class="virtual-name">
+                <el-icon class="virtual-caret"><Right /></el-icon>{{ row.name }}
+              </span>
+              <template #content>
+                <div>Parent: {{ row.parent_name || '(unknown)' }}</div>
+                <div>ID: {{ row.parent_id }}</div>
+              </template>
+            </el-tooltip>
             <span v-else>{{ row.name }}</span>
           </template>
         </el-table-column>
@@ -233,12 +230,6 @@ async function copyId(id: string) {
         </el-table-column>
         <el-table-column label="Address" min-width="180">
           <template #default="{ row }">{{ row.address }}<span v-if="row.port" class="muted">:{{ row.port }}</span></template>
-        </el-table-column>
-        <el-table-column label="Parent" min-width="120">
-          <template #default="{ row }">
-            <span v-if="row.parent_id">{{ parentNameOf(row as Node) }}</span>
-            <span v-else class="muted">—</span>
-          </template>
         </el-table-column>
         <el-table-column prop="network" label="Transport" width="100" />
         <el-table-column prop="security" label="Security" width="90" />

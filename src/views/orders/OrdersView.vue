@@ -196,7 +196,7 @@ async function onStatusChange(row: Order, status: Exclude<OrderStatus, 'pending'
             </el-tooltip>
           </template>
         </el-table-column>
-        <el-table-column label="User" min-width="120" prop="user_id" sortable="custom">
+        <el-table-column label="User" min-width="140" prop="user_id" sortable="custom">
           <template #default="{ row }">
             <span class="mono no-wrap">{{ row.user_id }}</span>
           </template>
@@ -225,12 +225,11 @@ async function onStatusChange(row: Order, status: Exclude<OrderStatus, 'pending'
             <el-tag v-else :type="statusTag(row.status)" size="small">{{ row.status }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="Platform" width="100" prop="platform">
+        <el-table-column label="Platform" width="120" prop="platform">
           <template #default="{ row }">
-            <el-tag size="small" effect="plain">{{ row.platform || 'alipay' }}</el-tag>
+            <el-tag size="small" effect="plain">{{ row.platform || 'alipay' }}<template v-if="row.channel"> · {{ row.channel }}</template></el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="channel" label="Channel" width="90"/>
         <el-table-column label="Created" width="170" prop="created_at" sortable="custom">
           <template #default="{ row }">{{ formatDateTime(row.created_at) }}</template>
         </el-table-column>
