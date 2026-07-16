@@ -52,6 +52,7 @@ const form = reactive({
   traffic_multiplier: 1,
   speed_limit_up_mbps: 0,
   speed_limit_down_mbps: 0,
+  level: 0,
   enabled: true,
 })
 
@@ -99,6 +100,7 @@ function resetForm() {
   form.traffic_multiplier = 1
   form.speed_limit_up_mbps = 0
   form.speed_limit_down_mbps = 0
+  form.level = 0
   form.enabled = true
 }
 
@@ -138,6 +140,7 @@ function prefillFromNode(node: Node) {
   form.traffic_multiplier = node.traffic_multiplier ?? 1
   form.speed_limit_up_mbps = Math.round((node.speed_limit_up_bps ?? 0) / BPS_PER_MBPS)
   form.speed_limit_down_mbps = Math.round((node.speed_limit_down_bps ?? 0) / BPS_PER_MBPS)
+  form.level = node.level
   form.enabled = node.enabled
 }
 
@@ -204,6 +207,7 @@ function buildRequest(): NodeRequest | null {
     vless: v2Enabled.value ? { ...form.vless } : null,
     flow: v2Enabled.value ? '' : form.flow,
     allow_insecure: form.allow_insecure,
+    level: form.level,
     traffic_multiplier: form.traffic_multiplier > 0 ? form.traffic_multiplier : 1,
     speed_limit_up_bps: Math.round(form.speed_limit_up_mbps * BPS_PER_MBPS),
     speed_limit_down_bps: Math.round(form.speed_limit_down_mbps * BPS_PER_MBPS),
@@ -337,6 +341,10 @@ async function onGenerateVlessKey() {
             </el-form-item>
             <el-form-item label="Enabled">
               <el-switch v-model="form.enabled" />
+            </el-form-item>
+            <el-form-item label="Level">
+              <el-input-number v-model="form.level" :min="0" />
+              <span class="hint">Access tier. A user can use this node only if their level is ≥ this value (0 = open to all). Inherited by virtual children.</span>
             </el-form-item>
           </el-tab-pane>
 

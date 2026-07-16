@@ -231,8 +231,13 @@ async function copyId(id: string) {
         <el-table-column label="Address" min-width="180">
           <template #default="{ row }">{{ row.address }}<span v-if="row.port" class="muted">:{{ row.port }}</span></template>
         </el-table-column>
-        <el-table-column prop="network" label="Transport" width="100" />
-        <el-table-column prop="security" label="Security" width="90" />
+        <el-table-column label="Transport / Security" min-width="150">
+          <template #default="{ row }">
+            <span>{{ row.network }}</span><span v-if="row.security && row.security !== 'none'" class="muted"> / {{ row.security }}</span>
+            <span v-if="row.parent_id" class="muted"> (inherit)</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="level" label="Level" width="70" />
         <el-table-column label="Mult." width="70">
           <template #default="{ row }">
             <span v-if="!row.parent_id">{{ (row.traffic_multiplier ?? 1).toFixed(2) }}<span v-if="(row.traffic_multiplier ?? 1) !== 1" class="muted">×</span></span>

@@ -89,6 +89,7 @@ export interface NodeRequest {
   reality_settings?: RealityConfig | null
   vless?: VLESS | null
   flow?: Flow
+  level?: number
   allow_insecure?: boolean
   traffic_multiplier?: number
   speed_limit_up_bps?: number
