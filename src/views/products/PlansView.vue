@@ -94,6 +94,14 @@ async function onDelete(plan: Plan) {
             <span v-else class="muted">—</span>
           </template>
         </el-table-column>
+        <el-table-column label="Speed limit" min-width="160">
+          <template #default="{ row }">
+            <span v-if="row.speed_limit_up_bps || row.speed_limit_down_bps">
+              ↑{{ Math.round(row.speed_limit_up_bps / 125000) }} / ↓{{ Math.round(row.speed_limit_down_bps / 125000) }} Mbps
+            </span>
+            <span v-else class="muted">Unlimited</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="level" label="Level" width="80" />
         <el-table-column label="Enabled" width="90">
           <template #default="{ row }">

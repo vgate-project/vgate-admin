@@ -10,8 +10,16 @@ import {Refresh} from "@element-plus/icons-vue";
 const props = defineProps<{ modelValue: boolean; node: Node | null; defaultParentId?: string | null }>()
 const emit = defineEmits<{ 'update:modelValue': [boolean]; saved: [token?: string] }>()
 
+// 1 Mbps = 125000 bytes/sec. The backend stores speed limits in bytes/sec
+// (0 = unlimited); the UI presents them in Mbps for operator convenience.
+const BPS_PER_MBPS = 125000
+
 const isEdit = computed(() => !!props.node)
 const saving = ref(false)
+
+// Active tab in the real-node editor. Virtual nodes use a simplified
+// single-section layout (no tabs).
+const activeTab = ref<'basics' | 'transport' | 'vless' | 'limits'>('basics')
 
 const dialogTitle = computed(() => {
   if (form.isVirtual) return isEdit.value ? 'Edit Virtual Node' : 'New Virtual Node'
@@ -42,6 +50,8 @@ const form = reactive({
   flow: '' as Flow,
   allow_insecure: false,
   traffic_multiplier: 1,
+  speed_limit_up_mbps: 0,
+  speed_limit_down_mbps: 0,
   enabled: true,
 })
 
@@ -87,6 +97,8 @@ function resetForm() {
   form.flow = ''
   form.allow_insecure = false
   form.traffic_multiplier = 1
+  form.speed_limit_up_mbps = 0
+  form.speed_limit_down_mbps = 0
   form.enabled = true
 }
 
@@ -124,6 +136,8 @@ function prefillFromNode(node: Node) {
   form.flow = node.flow
   form.allow_insecure = node.allow_insecure
   form.traffic_multiplier = node.traffic_multiplier ?? 1
+  form.speed_limit_up_mbps = Math.round((node.speed_limit_up_bps ?? 0) / BPS_PER_MBPS)
+  form.speed_limit_down_mbps = Math.round((node.speed_limit_down_bps ?? 0) / BPS_PER_MBPS)
   form.enabled = node.enabled
 }
 
@@ -132,6 +146,7 @@ watch(
   (v) => {
     if (v) {
       resetForm()
+      activeTab.value = 'basics'
       if (props.node) {
         prefillFromNode(props.node)
       } else if (props.defaultParentId) {
@@ -190,6 +205,8 @@ function buildRequest(): NodeRequest | null {
     flow: v2Enabled.value ? '' : form.flow,
     allow_insecure: form.allow_insecure,
     traffic_multiplier: form.traffic_multiplier > 0 ? form.traffic_multiplier : 1,
+    speed_limit_up_bps: Math.round(form.speed_limit_up_mbps * BPS_PER_MBPS),
+    speed_limit_down_bps: Math.round(form.speed_limit_down_mbps * BPS_PER_MBPS),
     enabled: form.enabled,
   }
 }
@@ -268,176 +285,213 @@ async function onGenerateVlessKey() {
     @update:model-value="emit('update:modelValue', $event)"
   >
     <el-form label-width="160px" label-position="right">
-      <el-divider content-position="left">Type</el-divider>
-      <el-form-item label="Node type" required>
-        <el-radio-group v-model="form.isVirtual">
-          <el-radio :value="false">Real node</el-radio>
-          <el-radio :value="true">Virtual child (multi-IP)</el-radio>
-        </el-radio-group>
-        <span v-if="form.isVirtual" class="hint">
-          Inherits transport config (security / TLS / Reality / VLESS) from the parent; only the address — and optionally the port — differ.
-        </span>
-      </el-form-item>
-      <el-form-item label="Parent node" v-if="form.isVirtual" required>
-        <el-select v-model="form.parentId" placeholder="Select parent node" :disabled="isEdit" style="width: 100%">
-          <el-option v-for="p in parentNodes" :key="p.id" :label="p.name + ' (' + p.address + ')'" :value="p.id" />
-        </el-select>
-      </el-form-item>
-
-      <el-divider content-position="left">Basics</el-divider>
-      <el-form-item label="Name" required>
-        <el-input v-model="form.name" placeholder="hk-1" />
-      </el-form-item>
-      <el-form-item label="Address" required>
-        <el-input v-model="form.address" :placeholder="form.isVirtual ? '1.2.3.4 (one of the parent IPs)' : 'hk.example.com:443'" />
-      </el-form-item>
-      <el-form-item label="Port" :required="!form.isVirtual">
-        <el-input-number v-model="form.port" :min="form.isVirtual ? 0 : 1" :max="65535" />
-        <span v-if="form.isVirtual" class="hint">0 = inherit parent port</span>
-      </el-form-item>
-      <template v-if="!form.isVirtual">
-        <el-form-item label="Network">
-          <el-select v-model="form.network">
-            <el-option label="tcp" value="tcp" />
-            <el-option label="ws" value="ws" />
-            <el-option label="xhttp" value="xhttp" />
+      <!-- Virtual child: simplified layout, transport is inherited from the parent. -->
+      <template v-if="form.isVirtual">
+        <el-form-item label="Node type" required>
+          <el-radio-group v-model="form.isVirtual">
+            <el-radio :value="false">Real node</el-radio>
+            <el-radio :value="true">Virtual child (multi-IP)</el-radio>
+          </el-radio-group>
+          <span class="hint">
+            Inherits transport config (security / TLS / Reality / VLESS) from the parent; only the address — and optionally the port — differ.
+          </span>
+        </el-form-item>
+        <el-form-item label="Parent node" required>
+          <el-select v-model="form.parentId" placeholder="Select parent node" :disabled="isEdit" style="width: 100%">
+            <el-option v-for="p in parentNodes" :key="p.id" :label="p.name + ' (' + p.address + ')'" :value="p.id" />
           </el-select>
         </el-form-item>
-        <el-form-item label="Security" required>
-          <el-select v-model="form.security">
-            <el-option label="none" value="none" />
-            <el-option label="tls" value="tls" />
-            <el-option label="reality" value="reality" />
-          </el-select>
+        <el-form-item label="Name" required>
+          <el-input v-model="form.name" placeholder="hk-1" />
         </el-form-item>
-        <el-form-item label="Flow">
-          <el-select v-model="form.flow" :disabled="v2Enabled || form.security === 'none' || form.network !== 'tcp'">
-            <el-option label="none" value="" />
-            <el-option label="xtls-rprx-vision" value="xtls-rprx-vision" />
-          </el-select>
-          <span v-if="v2Enabled" class="hint">disabled (v2 encryption active)</span>
-          <span v-else-if="form.security === 'none'" class="hint">disabled (security is none)</span>
-          <span v-else-if="form.network !== 'tcp'" class="hint">disabled (flow only supports tcp)</span>
+        <el-form-item label="Address" required>
+          <el-input v-model="form.address" placeholder="1.2.3.4 (one of the parent IPs)" />
         </el-form-item>
-        <el-form-item label="Allow insecure">
-          <el-switch v-model="form.allow_insecure" />
+        <el-form-item label="Port" :required="!form.isVirtual">
+          <el-input-number v-model="form.port" :min="0" :max="65535" />
+          <span class="hint">0 = inherit parent port</span>
         </el-form-item>
-        <el-form-item label="Traffic multiplier">
-          <el-input-number v-model="form.traffic_multiplier" :min="0.01" :max="1000" :step="0.1" :precision="2" />
-          <span class="hint">Scales reported traffic at aggregation time (1 = no change). &gt;1 inflates, &lt;1 deflates.</span>
-        </el-form-item>
-      </template>
-      <el-form-item label="Enabled">
-        <el-switch v-model="form.enabled" />
-      </el-form-item>
-
-      <template v-if="!form.isVirtual">
-      <el-divider content-position="left">Transport settings (JSON)</el-divider>
-      <el-form-item label="Settings">
-        <el-input
-          v-model="form.settingsJson"
-          type="textarea"
-          :rows="2"
-          placeholder='{"path": "/xhttp"}'
-        />
-        <span class="hint">JSON map, e.g. ws/xhttp path. Leave empty for defaults.</span>
-      </el-form-item>
-
-      <template v-if="form.security === 'reality'">
-        <el-divider content-position="left">Reality</el-divider>
-        <el-form-item label="Show">
-          <el-switch v-model="form.reality.show" />
-        </el-form-item>
-        <el-form-item label="Target">
-          <el-input v-model="form.reality.target" placeholder="www.microsoft.com:443" />
-        </el-form-item>
-        <el-form-item label="xver">
-          <el-input-number v-model="form.reality.xver" :min="0" :max="2" />
-        </el-form-item>
-        <el-form-item label="Server name (SNI)">
-          <el-input v-model="form.reality.server_name" placeholder="www.microsoft.com" />
-        </el-form-item>
-        <el-form-item label="Private key">
-          <div style="display: flex; gap: 8px; width: 100%">
-            <el-input v-model="form.reality.private_key" readonly placeholder="base64url X25519" />
-            <el-button @click="onGenerateRealityKey">
-              <el-icon><Refresh /></el-icon><span>Generate</span>
-            </el-button>
-          </div>
-        </el-form-item>
-        <el-form-item label="Short IDs">
-          <TagListInput v-model="form.reality.short_ids" placeholder="0123456789abcdef" />
-        </el-form-item>
-        <el-form-item label="Min client ver">
-          <el-input v-model="form.reality.min_client_ver" placeholder="1.8.16" />
-        </el-form-item>
-        <el-form-item label="Max client ver">
-          <el-input v-model="form.reality.max_client_ver" placeholder="1.8.16" />
-        </el-form-item>
-        <el-form-item label="Max time diff (ms)">
-          <el-input-number v-model="form.reality.max_time_diff" :min="0" />
+        <el-form-item label="Enabled">
+          <el-switch v-model="form.enabled" />
         </el-form-item>
       </template>
 
-      <template v-if="form.security === 'tls'">
-        <el-divider content-position="left">TLS</el-divider>
-        <el-form-item label="Server name">
-          <el-input v-model="form.tls.server_name" />
-        </el-form-item>
-        <el-form-item label="Cert file">
-          <el-input v-model="form.tls.cert_file" placeholder="/path/to/cert.pem" />
-        </el-form-item>
-        <el-form-item label="Key file">
-          <el-input v-model="form.tls.key_file" placeholder="/path/to/key.pem" />
-        </el-form-item>
-        <el-form-item label="Cert PEM">
-          <el-input v-model="form.tls.cert_pem" type="textarea" :rows="3" placeholder="inline PEM (alternative to file)" />
-        </el-form-item>
-        <el-form-item label="Key PEM">
-          <el-input v-model="form.tls.key_pem" type="textarea" :rows="3" placeholder="inline PEM (alternative to file)" />
-        </el-form-item>
-        <el-form-item label="ALPN">
-          <TagListInput v-model="form.tls.alpn" placeholder="h2" />
-        </el-form-item>
-        <el-form-item label="Min version">
-          <el-select v-model="form.tls.min_version" clearable>
-            <el-option label="1.0" value="1.0" /><el-option label="1.1" value="1.1" />
-            <el-option label="1.2" value="1.2" /><el-option label="1.3" value="1.3" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="Max version">
-          <el-select v-model="form.tls.max_version" clearable>
-            <el-option label="1.0" value="1.0" /><el-option label="1.1" value="1.1" />
-            <el-option label="1.2" value="1.2" /><el-option label="1.3" value="1.3" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="Reject unknown SNI">
-          <el-switch v-model="form.tls.reject_unknown_sni" />
-        </el-form-item>
-      </template>
+      <!-- Real node: tabbed layout -->
+      <template v-else>
+        <el-tabs v-model="activeTab">
+          <el-tab-pane label="Basics" name="basics">
+            <el-form-item label="Node type" required>
+              <el-radio-group v-model="form.isVirtual">
+                <el-radio :value="false">Real node</el-radio>
+                <el-radio :value="true">Virtual child (multi-IP)</el-radio>
+              </el-radio-group>
+            </el-form-item>
+            <el-form-item label="Name" required>
+              <el-input v-model="form.name" placeholder="hk-1" />
+            </el-form-item>
+            <el-form-item label="Address" required>
+              <el-input v-model="form.address" placeholder="hk.example.com:443" />
+            </el-form-item>
+            <el-form-item label="Port" :required="!form.isVirtual">
+              <el-input-number v-model="form.port" :min="1" :max="65535" />
+            </el-form-item>
+            <el-form-item label="Enabled">
+              <el-switch v-model="form.enabled" />
+            </el-form-item>
+          </el-tab-pane>
 
-      <el-divider content-position="left">VLESS v2 (optional)</el-divider>
-      <el-form-item label="Decryption">
-        <div style="display: flex; gap: 8px; width: 100%">
-          <el-input v-model="form.vless.decryption" readonly placeholder="base64url NFS private key, or empty for v0" />
-          <el-button @click="onGenerateVlessKey">
-            <el-icon><Refresh /></el-icon><span>Generate</span>
-          </el-button>
-        </div>
-        <span class="hint">Non-empty enables v2 AEAD encryption (disables Vision flow).</span>
-      </el-form-item>
-      <el-form-item label="XOR mode">
-        <el-input-number v-model="form.vless.xor_mode" :min="0" :max="2" />
-      </el-form-item>
-      <el-form-item label="Seconds from">
-        <el-input-number v-model="form.vless.seconds_from" :min="0" />
-      </el-form-item>
-      <el-form-item label="Seconds to">
-        <el-input-number v-model="form.vless.seconds_to" :min="0" />
-      </el-form-item>
-        <el-form-item label="Padding">
-          <el-input v-model="form.vless.padding" placeholder="spec string" />
-        </el-form-item>
+          <el-tab-pane label="Transport &amp; Security" name="transport">
+            <el-form-item label="Network">
+              <el-select v-model="form.network">
+                <el-option label="tcp" value="tcp" />
+                <el-option label="ws" value="ws" />
+                <el-option label="xhttp" value="xhttp" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="Security" required>
+              <el-select v-model="form.security">
+                <el-option label="none" value="none" />
+                <el-option label="tls" value="tls" />
+                <el-option label="reality" value="reality" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="Flow">
+              <el-select v-model="form.flow" :disabled="v2Enabled || form.security === 'none' || form.network !== 'tcp'">
+                <el-option label="none" value="" />
+                <el-option label="xtls-rprx-vision" value="xtls-rprx-vision" />
+              </el-select>
+              <span v-if="v2Enabled" class="hint">disabled (v2 encryption active)</span>
+              <span v-else-if="form.security === 'none'" class="hint">disabled (security is none)</span>
+              <span v-else-if="form.network !== 'tcp'" class="hint">disabled (flow only supports tcp)</span>
+            </el-form-item>
+            <el-form-item label="Allow insecure">
+              <el-switch v-model="form.allow_insecure" />
+            </el-form-item>
+            <el-form-item label="Settings">
+              <el-input
+                v-model="form.settingsJson"
+                type="textarea"
+                :rows="2"
+                placeholder='{"path": "/xhttp"}'
+              />
+              <span class="hint">JSON map, e.g. ws/xhttp path. Leave empty for defaults.</span>
+            </el-form-item>
+
+            <template v-if="form.security === 'reality'">
+              <el-divider content-position="left">Reality</el-divider>
+              <el-form-item label="Show">
+                <el-switch v-model="form.reality.show" />
+              </el-form-item>
+              <el-form-item label="Target">
+                <el-input v-model="form.reality.target" placeholder="www.microsoft.com:443" />
+              </el-form-item>
+              <el-form-item label="xver">
+                <el-input-number v-model="form.reality.xver" :min="0" :max="2" />
+              </el-form-item>
+              <el-form-item label="Server name (SNI)">
+                <el-input v-model="form.reality.server_name" placeholder="www.microsoft.com" />
+              </el-form-item>
+              <el-form-item label="Private key">
+                <div style="display: flex; gap: 8px; width: 100%">
+                  <el-input v-model="form.reality.private_key" readonly placeholder="base64url X25519" />
+                  <el-button @click="onGenerateRealityKey">
+                    <el-icon><Refresh /></el-icon><span>Generate</span>
+                  </el-button>
+                </div>
+              </el-form-item>
+              <el-form-item label="Short IDs">
+                <TagListInput v-model="form.reality.short_ids" placeholder="0123456789abcdef" />
+              </el-form-item>
+              <el-form-item label="Min client ver">
+                <el-input v-model="form.reality.min_client_ver" placeholder="1.8.16" />
+              </el-form-item>
+              <el-form-item label="Max client ver">
+                <el-input v-model="form.reality.max_client_ver" placeholder="1.8.16" />
+              </el-form-item>
+              <el-form-item label="Max time diff (ms)">
+                <el-input-number v-model="form.reality.max_time_diff" :min="0" />
+              </el-form-item>
+            </template>
+
+            <template v-if="form.security === 'tls'">
+              <el-divider content-position="left">TLS</el-divider>
+              <el-form-item label="Server name">
+                <el-input v-model="form.tls.server_name" />
+              </el-form-item>
+              <el-form-item label="Cert file">
+                <el-input v-model="form.tls.cert_file" placeholder="/path/to/cert.pem" />
+              </el-form-item>
+              <el-form-item label="Key file">
+                <el-input v-model="form.tls.key_file" placeholder="/path/to/key.pem" />
+              </el-form-item>
+              <el-form-item label="Cert PEM">
+                <el-input v-model="form.tls.cert_pem" type="textarea" :rows="3" placeholder="inline PEM (alternative to file)" />
+              </el-form-item>
+              <el-form-item label="Key PEM">
+                <el-input v-model="form.tls.key_pem" type="textarea" :rows="3" placeholder="inline PEM (alternative to file)" />
+              </el-form-item>
+              <el-form-item label="ALPN">
+                <TagListInput v-model="form.tls.alpn" placeholder="h2" />
+              </el-form-item>
+              <el-form-item label="Min version">
+                <el-select v-model="form.tls.min_version" clearable>
+                  <el-option label="1.0" value="1.0" /><el-option label="1.1" value="1.1" />
+                  <el-option label="1.2" value="1.2" /><el-option label="1.3" value="1.3" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="Max version">
+                <el-select v-model="form.tls.max_version" clearable>
+                  <el-option label="1.0" value="1.0" /><el-option label="1.1" value="1.1" />
+                  <el-option label="1.2" value="1.2" /><el-option label="1.3" value="1.3" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="Reject unknown SNI">
+                <el-switch v-model="form.tls.reject_unknown_sni" />
+              </el-form-item>
+            </template>
+          </el-tab-pane>
+
+          <el-tab-pane label="VLESS v2" name="vless">
+            <el-divider content-position="left">VLESS v2 (optional)</el-divider>
+            <el-form-item label="Decryption">
+              <div style="display: flex; gap: 8px; width: 100%">
+                <el-input v-model="form.vless.decryption" readonly placeholder="base64url NFS private key, or empty for v0" />
+                <el-button @click="onGenerateVlessKey">
+                  <el-icon><Refresh /></el-icon><span>Generate</span>
+                </el-button>
+              </div>
+              <span class="hint">Non-empty enables v2 AEAD encryption (disables Vision flow).</span>
+            </el-form-item>
+            <el-form-item label="XOR mode">
+              <el-input-number v-model="form.vless.xor_mode" :min="0" :max="2" />
+            </el-form-item>
+            <el-form-item label="Seconds from">
+              <el-input-number v-model="form.vless.seconds_from" :min="0" />
+            </el-form-item>
+            <el-form-item label="Seconds to">
+              <el-input-number v-model="form.vless.seconds_to" :min="0" />
+            </el-form-item>
+            <el-form-item label="Padding">
+              <el-input v-model="form.vless.padding" placeholder="spec string" />
+            </el-form-item>
+          </el-tab-pane>
+
+          <el-tab-pane label="Limits" name="limits">
+            <el-divider content-position="left">Limits</el-divider>
+            <el-form-item label="Traffic multiplier">
+              <el-input-number v-model="form.traffic_multiplier" :min="0.01" :max="1000" :step="0.1" :precision="2" />
+              <span class="hint">Scales reported traffic at aggregation time (1 = no change). &gt;1 inflates, &lt;1 deflates.</span>
+            </el-form-item>
+            <el-form-item label="Upload speed limit">
+              <el-input-number v-model="form.speed_limit_up_mbps" :min="0" :max="10000" :step="10" />
+              <span class="hint">Mbps, aggregate cap for this node (0 = unlimited). Inherited by virtual children.</span>
+            </el-form-item>
+            <el-form-item label="Download speed limit">
+              <el-input-number v-model="form.speed_limit_down_mbps" :min="0" :max="10000" :step="10" />
+              <span class="hint">Mbps, aggregate cap for this node (0 = unlimited). Inherited by virtual children.</span>
+            </el-form-item>
+          </el-tab-pane>
+        </el-tabs>
       </template>
     </el-form>
 

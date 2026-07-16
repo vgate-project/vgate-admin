@@ -6,6 +6,9 @@ import type { Plan, PlanPrice, PlanRequest } from '@/types/api'
 import { formatBytes, formatPrice } from '@/utils/format'
 import QuotaInput from '@/components/QuotaInput.vue'
 
+// 1 Mbps = 125000 bytes/sec. UI works in Mbps; backend in bytes/sec.
+const BPS_PER_MBPS = 125000
+
 const props = defineProps<{ modelValue: boolean; plan: Plan | null }>()
 const emit = defineEmits<{ 'update:modelValue': [boolean]; saved: [] }>()
 
@@ -31,6 +34,8 @@ const form = reactive({
   description: '',
   level: 0,
   enabled: true,
+  speed_limit_up_mbps: 0,
+  speed_limit_down_mbps: 0,
   reset_enabled: false,
   reset_price: 0,
   prices: [] as PlanPrice[],
@@ -49,6 +54,8 @@ watch(
     form.description = ''
     form.level = 0
     form.enabled = true
+    form.speed_limit_up_mbps = 0
+    form.speed_limit_down_mbps = 0
     form.reset_enabled = false
     form.reset_price = 0
     form.prices = [blankPrice()]
@@ -58,6 +65,8 @@ watch(
       form.description = props.plan.description
       form.level = props.plan.level
       form.enabled = props.plan.enabled
+      form.speed_limit_up_mbps = Math.round((props.plan.speed_limit_up_bps ?? 0) / BPS_PER_MBPS)
+      form.speed_limit_down_mbps = Math.round((props.plan.speed_limit_down_bps ?? 0) / BPS_PER_MBPS)
       form.reset_enabled = props.plan.reset_enabled ?? false
       form.reset_price = props.plan.reset_price ?? 0
       form.prices = (props.plan.prices && props.plan.prices.length ? props.plan.prices : [blankPrice()]).map(
@@ -85,6 +94,8 @@ function buildRequest(): PlanRequest {
     description: form.description.trim() || undefined,
     level: form.level,
     enabled: form.enabled,
+    speed_limit_up_bps: Math.round(form.speed_limit_up_mbps * BPS_PER_MBPS),
+    speed_limit_down_bps: Math.round(form.speed_limit_down_mbps * BPS_PER_MBPS),
     reset_enabled: form.reset_enabled,
     reset_price: form.reset_price,
     prices: form.prices.map((p, i) => ({
@@ -182,6 +193,16 @@ async function onSubmit() {
       <el-form-item label="Reset price">
         <el-input-number v-model="form.reset_price" :min="0" :step="100" />
         <span class="hint">{{ formatPrice(form.reset_price) }}</span>
+      </el-form-item>
+
+      <el-divider>Speed Limit</el-divider>
+      <el-form-item label="Upload speed limit">
+        <el-input-number v-model="form.speed_limit_up_mbps" :min="0" :max="10000" :step="10" />
+        <span class="hint">Mbps, per-user cap from this plan (0 = unlimited).</span>
+      </el-form-item>
+      <el-form-item label="Download speed limit">
+        <el-input-number v-model="form.speed_limit_down_mbps" :min="0" :max="10000" :step="10" />
+        <span class="hint">Mbps, per-user cap from this plan (0 = unlimited).</span>
       </el-form-item>
     </el-form>
 

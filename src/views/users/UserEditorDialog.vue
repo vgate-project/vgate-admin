@@ -10,6 +10,10 @@ import QuotaInput from '@/components/QuotaInput.vue'
 const props = defineProps<{ modelValue: boolean; user: User | null }>()
 const emit = defineEmits<{ 'update:modelValue': [boolean]; saved: [subToken?: string] }>()
 
+// 1 Mbps = 125000 bytes/sec. The backend stores speed limits in bytes/sec
+// (0 = unlimited); the UI presents them in Mbps for operator convenience.
+const BPS_PER_MBPS = 125000
+
 const isEdit = computed(() => !!props.user)
 const saving = ref(false)
 
@@ -20,6 +24,8 @@ const form = reactive({
   expire_at: null as string | null,
   quota_bytes: 0,
   quota_reset_enabled: false,
+  speed_limit_up_mbps: 0,
+  speed_limit_down_mbps: 0,
   enabled: true,
   max_invites: null as number | null,
 })
@@ -31,6 +37,8 @@ function resetForm() {
   form.expire_at = null
   form.quota_bytes = 0
   form.quota_reset_enabled = false
+  form.speed_limit_up_mbps = 0
+  form.speed_limit_down_mbps = 0
   form.enabled = true
   form.max_invites = null
 }
@@ -47,6 +55,8 @@ watch(
       form.expire_at = props.user.expire_at ?? null
       form.quota_bytes = props.user.quota_bytes
       form.quota_reset_enabled = props.user.quota_reset_enabled
+      form.speed_limit_up_mbps = Math.round((props.user.speed_limit_up_bps ?? 0) / BPS_PER_MBPS)
+      form.speed_limit_down_mbps = Math.round((props.user.speed_limit_down_bps ?? 0) / BPS_PER_MBPS)
       form.enabled = props.user.enabled
       form.max_invites = props.user.max_invites ?? null
     }
@@ -61,6 +71,8 @@ function buildRequest(): UserRequest {
     expire_at: form.expire_at,
     quota_bytes: form.quota_bytes,
     quota_reset_enabled: form.quota_reset_enabled,
+    speed_limit_up_bps: Math.round(form.speed_limit_up_mbps * BPS_PER_MBPS),
+    speed_limit_down_bps: Math.round(form.speed_limit_down_mbps * BPS_PER_MBPS),
     enabled: form.enabled,
     max_invites: form.max_invites,
   }
@@ -121,6 +133,14 @@ async function onSubmit() {
       <el-form-item label="Monthly reset">
         <el-switch v-model="form.quota_reset_enabled" />
         <span class="hint">Participates in the global monthly reset (reset day set by system config quota.reset_day).</span>
+      </el-form-item>
+      <el-form-item label="Upload speed limit">
+        <el-input-number v-model="form.speed_limit_up_mbps" :min="0" :max="10000" :step="10" />
+        <span class="hint">Mbps per-user cap (0 = unlimited). Effective rate is min of this and the node's global limit.</span>
+      </el-form-item>
+      <el-form-item label="Download speed limit">
+        <el-input-number v-model="form.speed_limit_down_mbps" :min="0" :max="10000" :step="10" />
+        <span class="hint">Mbps per-user cap (0 = unlimited). Effective rate is min of this and the node's global limit.</span>
       </el-form-item>
       <el-form-item label="Enabled">
         <el-switch v-model="form.enabled" />

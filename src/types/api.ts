@@ -63,6 +63,8 @@ export interface Node {
   allow_insecure: boolean
   level: number
   traffic_multiplier?: number
+  speed_limit_up_bps?: number
+  speed_limit_down_bps?: number
   token: string
   last_seen_at?: string
   online?: boolean
@@ -89,6 +91,8 @@ export interface NodeRequest {
   flow?: Flow
   allow_insecure?: boolean
   traffic_multiplier?: number
+  speed_limit_up_bps?: number
+  speed_limit_down_bps?: number
   enabled?: boolean // *bool on backend: omit = default true on create
 }
 
@@ -106,6 +110,8 @@ export interface User {
   expire_at?: string
   quota_bytes: number
   quota_reset_enabled: boolean
+  speed_limit_up_bps?: number
+  speed_limit_down_bps?: number
   up_total: number
   down_total: number
   last_reset_at?: string
@@ -128,6 +134,8 @@ export interface UserRequest {
   expire_at?: string | null
   quota_bytes: number
   quota_reset_enabled: boolean
+  speed_limit_up_bps?: number
+  speed_limit_down_bps?: number
   enabled?: boolean
   max_invites?: number | null
 }
@@ -253,6 +261,9 @@ export interface Plan {
   description: string
   level: number
   enabled: boolean
+  // Per-user speed cap delivered by this plan (bytes/sec, 0 = unlimited).
+  speed_limit_up_bps?: number
+  speed_limit_down_bps?: number
   // Optional plan-scoped traffic reset package.
   reset_enabled?: boolean
   reset_price?: number // cents
@@ -267,6 +278,8 @@ export interface PlanRequest {
   description?: string
   level?: number
   enabled?: boolean
+  speed_limit_up_bps?: number
+  speed_limit_down_bps?: number
   reset_enabled?: boolean
   reset_price?: number // cents
   prices: PlanPrice[]
