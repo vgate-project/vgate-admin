@@ -333,7 +333,52 @@ const subscriptionCat: CategoryDef = {
   ],
 }
 
-const categories: CategoryDef[] = [systemCat, usersCat, securityCat, emailCat, paymentCat, subscriptionCat]
+const telegramGeneralCat: CategoryDef = {
+  key: 'telegram_general',
+  label: 'General',
+  hint: 'Bot connection and master switch.',
+  fields: [
+    {
+      key: 'telegram.enabled',
+      label: 'Enable Telegram Bot',
+      desc: 'Master switch for the bot. Requires a valid bot token to actually start.',
+      type: 'switch',
+    },
+    { key: 'telegram.bot_token', label: 'Bot Token', desc: 'Token from @BotFather. Treated as a secret.', type: 'textarea' },
+    { key: 'telegram.bot_username', label: 'Bot Username', desc: 'The bot @username (without the leading @). Used to build the bind deep link shown to users.', type: 'text' },
+    {
+      key: 'telegram.admin_chat_ids',
+      label: 'Admin Chat IDs',
+      desc: 'One chat/group/channel ID per entry. These chats receive admin alerts and may issue remote-control commands. Group/channel IDs are negative integers.',
+      type: 'tags',
+    },
+    { key: 'telegram.user_bot_enabled', label: 'Enable User Bot', desc: 'When enabled, users may link their Telegram and use /status and /sub commands.', type: 'switch' },
+  ],
+}
+
+const telegramAlertsCat: CategoryDef = {
+  key: 'telegram_alerts',
+  label: 'Alerts',
+  hint: 'Which events trigger admin notifications and user broadcasts.',
+  fields: [
+    { key: 'telegram.alert_new_registration', label: 'New Registration', desc: 'Notify admins when a new user registers.', type: 'switch' },
+    { key: 'telegram.alert_order_paid', label: 'Order Paid', desc: 'Notify admins when an order is paid.', type: 'switch' },
+    { key: 'telegram.alert_node_up', label: 'Node Online', desc: 'Notify admins when a node comes back online.', type: 'switch' },
+    { key: 'telegram.alert_node_down', label: 'Node Offline', desc: 'Notify admins when a node goes offline.', type: 'switch' },
+    { key: 'telegram.alert_traffic_exceeded', label: 'Traffic Exceeded', desc: 'Notify admins once when a user exceeds their traffic quota.', type: 'switch' },
+    { key: 'telegram.alert_announcement', label: 'Announcement', desc: 'Broadcast new announcements to opted-in users via Telegram.', type: 'switch' },
+  ],
+}
+
+const telegramCat: CategoryDef = {
+  key: 'telegram',
+  label: 'Telegram',
+  hint: 'Telegram bot for admin alerts, user self-service, admin remote control and announcement broadcasts. Leave disabled if unused.',
+  fields: [], // parent has no direct fields
+  children: [telegramGeneralCat, telegramAlertsCat], // become sub-tabs
+}
+
+const categories: CategoryDef[] = [systemCat, usersCat, securityCat, emailCat, paymentCat, subscriptionCat, telegramCat]
 
 // Default the active sub-tab of each parent category to its first child, so
 // clicking a parent tab (e.g. Payment) opens its first sub-tab.

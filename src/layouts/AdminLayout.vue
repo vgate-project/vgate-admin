@@ -4,12 +4,11 @@ import { useAuthStore } from '@/stores/auth'
 import { useAppStore } from '@/stores/app'
 import {
   Connection,
+  ChatDotRound,
   DataLine,
   Expand,
   Fold,
   Goods,
-  Message,
-  Notification,
   Odometer,
   Promotion,
   Setting,
@@ -72,13 +71,9 @@ function onLogout() {
           <el-icon><UserFilled /></el-icon>
           <template #title>Admins</template>
         </el-menu-item>
-        <el-menu-item index="/announcements">
-          <el-icon><Notification /></el-icon>
-          <template #title>Announcements</template>
-        </el-menu-item>
-        <el-menu-item index="/email">
-          <el-icon><Message /></el-icon>
-          <template #title>Email</template>
+        <el-menu-item index="/messaging">
+          <el-icon><ChatDotRound /></el-icon>
+          <template #title>Messaging</template>
         </el-menu-item>
         <el-menu-item v-if="auth.isSuperAdmin" index="/plans">
           <el-icon><Goods /></el-icon>
