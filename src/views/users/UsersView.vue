@@ -285,9 +285,10 @@ function onCommand(cmd: string, row: User) {
         </el-table-column>
         <el-table-column label="Usage" width="180" prop="used" sortable="custom">
           <template #default="{ row }">
-            <span v-if="usagePercent(row as User) < 0">Unlimited</span>
+            <span v-if="usagePercent(row as User) < 0" class="usage-cell">Unlimited</span>
             <el-progress
                 v-else
+                class="usage-cell"
                 :percentage="usagePercent(row as User)"
                 :format="(p: number) => p.toFixed(1) + '%'"
                 :color="usagePercent(row as User) >= 100 ? '#f56c6c' : undefined"
@@ -406,5 +407,14 @@ function onCommand(cmd: string, row: User) {
 
 h2 {
   margin: 0;
+}
+
+/* Smaller font for the Usage column text and progress percentage. */
+.usage-cell {
+  font-size: 12px;
+}
+
+.usage-cell :deep(.el-progress__text) {
+  font-size: 12px !important;
 }
 </style>
