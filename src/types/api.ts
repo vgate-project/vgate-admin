@@ -359,3 +359,43 @@ export interface CreateOrderResponse {
   // "qr" (render pay_url as a QR code to scan, e.g. wechat NATIVE).
   pay_mode?: 'redirect' | 'qr'
 }
+
+// --- Tickets (support work-orders) ---
+export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed'
+export type TicketPriority = 'low' | 'normal' | 'high' | 'urgent'
+export type TicketSender = 'user' | 'admin'
+
+export interface Ticket {
+  id: string
+  user_id: string
+  subject: string
+  priority: TicketPriority
+  status: TicketStatus
+  user_email?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface TicketMessage {
+  id: string
+  ticket_id: string
+  sender: TicketSender
+  sender_id: string
+  content: string
+  created_at: string
+}
+
+export interface TicketDetail {
+  ticket: Ticket
+  messages: TicketMessage[]
+}
+
+export interface TicketCreateRequest {
+  subject: string
+  content: string
+  priority?: TicketPriority
+}
+
+export interface TicketStatusRequest {
+  status: TicketStatus
+}

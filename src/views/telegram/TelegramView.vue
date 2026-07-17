@@ -4,6 +4,8 @@ import { ElMessage } from 'element-plus'
 import { apiTelegram } from '@/api/telegram'
 import type { TelegramBroadcastResult } from '@/api/telegram'
 
+// Telegram admin self-link (bind/unbind) now lives in the admin Settings
+// page, mirroring the user portal. This view is the broadcast-only form.
 const sending = ref(false)
 const result = ref<TelegramBroadcastResult | null>(null)
 

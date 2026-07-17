@@ -5,6 +5,7 @@ import { useAppStore } from '@/stores/app'
 import {
   Connection,
   ChatDotRound,
+  ChatLineRound,
   DataLine,
   Expand,
   Fold,
@@ -82,6 +83,10 @@ function onLogout() {
         <el-menu-item index="/orders">
           <el-icon><Tickets /></el-icon>
           <template #title>Orders</template>
+        </el-menu-item>
+        <el-menu-item index="/tickets">
+          <el-icon><ChatLineRound /></el-icon>
+          <template #title>Tickets</template>
         </el-menu-item>
         <el-menu-item v-if="auth.isSuperAdmin" index="/system-config">
           <el-icon><Setting /></el-icon>

@@ -346,12 +346,6 @@ const telegramGeneralCat: CategoryDef = {
     },
     { key: 'telegram.bot_token', label: 'Bot Token', desc: 'Token from @BotFather. Treated as a secret.', type: 'textarea' },
     { key: 'telegram.bot_username', label: 'Bot Username', desc: 'The bot @username (without the leading @). Used to build the bind deep link shown to users.', type: 'text' },
-    {
-      key: 'telegram.admin_chat_ids',
-      label: 'Admin Chat IDs',
-      desc: 'One chat/group/channel ID per entry. These chats receive admin alerts and may issue remote-control commands. Group/channel IDs are negative integers.',
-      type: 'tags',
-    },
     { key: 'telegram.user_bot_enabled', label: 'Enable User Bot', desc: 'When enabled, users may link their Telegram and use /status and /sub commands.', type: 'switch' },
   ],
 }
@@ -367,6 +361,7 @@ const telegramAlertsCat: CategoryDef = {
     { key: 'telegram.alert_node_down', label: 'Node Offline', desc: 'Notify admins when a node goes offline.', type: 'switch' },
     { key: 'telegram.alert_traffic_exceeded', label: 'Traffic Exceeded', desc: 'Notify admins once when a user exceeds their traffic quota.', type: 'switch' },
     { key: 'telegram.alert_announcement', label: 'Announcement', desc: 'Broadcast new announcements to opted-in users via Telegram.', type: 'switch' },
+    { key: 'telegram.alert_ticket', label: 'Ticket Activity', desc: 'Notify admins when a ticket is opened or a user replies, so they can reply from Telegram by quoting the message.', type: 'switch' },
   ],
 }
 
