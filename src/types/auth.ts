@@ -9,6 +9,7 @@ export interface AdminLoginResponse {
 export interface AdminConfig {
   captcha_enabled: boolean
   captcha_site_key: string
+  site_name: string
 }
 
 export interface RefreshResponse {

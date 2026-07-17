@@ -4,10 +4,12 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 
 import { useAuthStore } from '@/stores/auth'
+import { useAppStore } from '@/stores/app'
 import { apiAuth } from '@/api/auth'
 import type { AdminConfig } from '@/types/auth'
 
 const auth = useAuthStore()
+const app = useAppStore()
 const router = useRouter()
 const route = useRoute()
 
@@ -24,6 +26,8 @@ async function loadConfig() {
     const { data } = await apiAuth.getConfig()
     config.value = data
     captchaEnabled.value = !!data.captcha_enabled
+    app.siteName = data.site_name || 'VGate'
+    document.title = app.siteName
   } catch {
     config.value = null
     captchaEnabled.value = false
@@ -115,7 +119,7 @@ async function onSubmit() {
 <template>
   <div class="login-wrapper">
     <el-card class="login-card">
-      <h1 class="login-title">VGate Admin</h1>
+      <h1 class="login-title">{{ app.siteName }}</h1>
       <el-form @submit.prevent="onSubmit" label-position="top">
         <el-form-item label="Username">
           <el-input v-model="form.username" placeholder="admin" autocomplete="username" />

@@ -36,6 +36,25 @@ const systemCat: CategoryDef = {
   fields: [],
   children: [
     {
+      key: 'general',
+      label: 'General',
+      hint: 'Site-wide display settings.',
+      fields: [
+        {
+          key: 'site.name',
+          label: 'Site Name',
+          desc: 'Display name shown on the admin & user portals (login page, sidebar brand, browser tab title).',
+          type: 'text',
+        },
+        {
+          key: 'site.base_url',
+          label: 'User Base URL',
+          desc: 'Public base URL of the user SPA (e.g. https://user.example.com). Used to build the clickable email-verification link; leave empty to send the raw token only.',
+          type: 'text',
+        },
+      ],
+    },
+    {
       key: 'server',
       label: 'Server',
       hint: 'HTTP server timeouts and request handling.',
@@ -252,19 +271,6 @@ const emailCat: CategoryDef = {
         { key: 'email.smtp_user', label: 'SMTP User', desc: 'Empty = no authentication', type: 'text' },
         { key: 'email.smtp_pass', label: 'SMTP Password', type: 'textarea' },
         { key: 'email.smtp_from', label: 'From Address', type: 'text' },
-      ],
-    },
-    {
-      key: 'verification',
-      label: 'Verification',
-      hint: 'Email-verification link construction (used at registration).',
-      fields: [
-        {
-          key: 'app.user_base_url',
-          label: 'User Base URL',
-          desc: 'Public base URL of the user SPA (e.g. https://user.example.com). Used to build the clickable email-verification link; leave empty to send the raw token only.',
-          type: 'text',
-        },
       ],
     },
   ],
@@ -518,14 +524,6 @@ async function saveAll() {
   <div>
     <h2 style="margin: 0 0 16px">System Config</h2>
     <el-card shadow="never">
-      <el-alert
-        type="info"
-        title="System config is upsert-only. Deleting keys is not supported in v1."
-        :closable="false"
-        show-icon
-        style="margin-bottom: 12px"
-      />
-
       <el-tabs v-model="activeTab" v-loading="loading">
         <!-- Parent config tabs (System, Users, Security, Email, Payment): each
              renders nested sub-tabs via `children`. New categories only need an

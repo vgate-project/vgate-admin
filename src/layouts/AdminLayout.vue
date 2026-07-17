@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useAppStore } from '@/stores/app'
@@ -24,6 +25,10 @@ const app = useAppStore()
 const route = useRoute()
 const router = useRouter()
 
+onMounted(() => {
+  app.loadSiteName()
+})
+
 function onLogout() {
   auth.logout()
   router.push({ name: 'login' })
@@ -34,8 +39,8 @@ function onLogout() {
   <el-container class="layout">
     <el-aside :width="app.sidebarCollapsed ? '64px' : '220px'" class="aside">
       <div class="brand" @click="router.push('/dashboard')">
-        <img class="brand-logo" src="/favicon.svg" alt="VGate" />
-        <span v-if="!app.sidebarCollapsed">VGate</span>
+        <img class="brand-logo" src="/favicon.svg" alt="Logo" />
+        <span v-if="!app.sidebarCollapsed">{{ app.siteName }}</span>
       </div>
       <el-menu
         mode="vertical"
