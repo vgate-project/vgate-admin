@@ -282,7 +282,7 @@ function planName(id?: string | null): string {
         </el-form-item>
         <el-form-item v-if="form.type === 'traffic'" label="Quota" required>
           <QuotaInput v-model="form.quota_bytes" />
-          <span class="hint">{{ formatBytes(form.quota_bytes) }} (0 = unlimited)</span>
+          <span class="hint">{{ formatBytes(form.quota_bytes) }} (0 = no quota; required &gt; 0)</span>
         </el-form-item>
         <el-form-item v-if="form.type === 'duration'" label="Duration (days)" required>
           <el-input-number v-model="form.duration_days" :min="1" controls-position="right" style="width: 100%" />

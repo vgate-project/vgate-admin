@@ -23,6 +23,7 @@ const form = reactive({
   level: 0,
   expire_at: null as string | null,
   quota_bytes: 0,
+  unlimited: false,
   quota_reset_enabled: false,
   speed_limit_up_mbps: 0,
   speed_limit_down_mbps: 0,
@@ -36,6 +37,7 @@ function resetForm() {
   form.level = 0
   form.expire_at = null
   form.quota_bytes = 0
+  form.unlimited = false
   form.quota_reset_enabled = false
   form.speed_limit_up_mbps = 0
   form.speed_limit_down_mbps = 0
@@ -53,7 +55,9 @@ watch(
       form.username = props.user.username ?? ''
       form.level = props.user.level
       form.expire_at = props.user.expire_at ?? null
-      form.quota_bytes = props.user.quota_bytes
+      // -1 is the "unlimited" sentinel; show 0 in the (disabled) numeric input.
+      form.unlimited = props.user.quota_bytes === -1
+      form.quota_bytes = form.unlimited ? 0 : props.user.quota_bytes
       form.quota_reset_enabled = props.user.quota_reset_enabled
       form.speed_limit_up_mbps = Math.round((props.user.speed_limit_up_bps ?? 0) / BPS_PER_MBPS)
       form.speed_limit_down_mbps = Math.round((props.user.speed_limit_down_bps ?? 0) / BPS_PER_MBPS)
@@ -69,7 +73,7 @@ function buildRequest(): UserRequest {
     username: form.username.trim() || null,
     level: form.level,
     expire_at: form.expire_at,
-    quota_bytes: form.quota_bytes,
+    quota_bytes: form.unlimited ? -1 : form.quota_bytes,
     quota_reset_enabled: form.quota_reset_enabled,
     speed_limit_up_bps: Math.round(form.speed_limit_up_mbps * BPS_PER_MBPS),
     speed_limit_down_bps: Math.round(form.speed_limit_down_mbps * BPS_PER_MBPS),
@@ -106,7 +110,7 @@ async function onSubmit() {
     width="560px"
     @update:model-value="emit('update:modelValue', $event)"
   >
-    <el-form label-width="140px">
+    <el-form label-width="180px">
       <el-form-item label="Email" required>
         <el-input v-model="form.email" placeholder="user@example.com" />
       </el-form-item>
@@ -127,8 +131,11 @@ async function onSubmit() {
         />
       </el-form-item>
       <el-form-item label="Quota">
-        <QuotaInput v-model="form.quota_bytes" />
-        <span class="hint">0 = unlimited. Used: {{ formatBytes(form.quota_bytes) }}</span>
+        <el-checkbox v-model="form.unlimited" class="quota-unlimited">Unlimited</el-checkbox>
+        <QuotaInput v-model="form.quota_bytes" :disabled="form.unlimited" />
+        <span class="hint">
+          {{ form.unlimited ? 'No traffic cap.' : '0 = no quota (blocked). Used: ' + formatBytes(form.quota_bytes) }}
+        </span>
       </el-form-item>
       <el-form-item label="Monthly reset">
         <el-switch v-model="form.quota_reset_enabled" />
@@ -165,5 +172,8 @@ async function onSubmit() {
   margin-left: 8px;
   font-size: 12px;
   color: #909399;
+}
+.quota-unlimited {
+  margin-right: 8px;
 }
 </style>

@@ -18,13 +18,6 @@ const createVisible = ref(false)
 const createForm = ref({ username: '', password: '', role: 'admin' })
 const creating = ref(false)
 
-// Change password dialog
-const pwdVisible = ref(false)
-const pwdAdminId = ref<number | null>(null)
-const pwdAdminName = ref('')
-const pwdPassword = ref('')
-const pwdSaving = ref(false)
-
 async function load() {
   if (!auth.isSuperAdmin) return
   loading.value = true
@@ -59,35 +52,13 @@ async function onCreate() {
   }
 }
 
-function openChangePwd(admin: Admin) {
-  pwdAdminId.value = admin.id
-  pwdAdminName.value = admin.username
-  pwdPassword.value = ''
-  pwdVisible.value = true
-}
-
-async function onChangePwd() {
-  if (!pwdPassword.value) {
-    ElMessage.error('Password is required')
-    return
-  }
-  pwdSaving.value = true
-  try {
-    await apiAdmins.updatePassword(pwdAdminId.value!, pwdPassword.value)
-    ElMessage.success('Password updated')
-    pwdVisible.value = false
-  } finally {
-    pwdSaving.value = false
-  }
-}
-
-// Edit dialog (username + role)
+// Edit dialog (username + role + optional password)
 const editVisible = ref(false)
 const editSaving = ref(false)
-const editForm = ref({ id: 0, username: '', role: 'admin' })
+const editForm = ref({ id: 0, username: '', role: 'admin', password: '' })
 
 function openEdit(admin: Admin) {
-  editForm.value = { id: admin.id, username: admin.username, role: admin.role }
+  editForm.value = { id: admin.id, username: admin.username, role: admin.role, password: '' }
   editVisible.value = true
 }
 
@@ -102,6 +73,10 @@ async function onUpdate() {
       username: editForm.value.username,
       role: editForm.value.role,
     })
+    // Only update the password when one was entered; leave it unchanged otherwise.
+    if (editForm.value.password) {
+      await apiAdmins.updatePassword(editForm.value.id, editForm.value.password)
+    }
     ElMessage.success('Admin updated')
     editVisible.value = false
     load()
@@ -156,7 +131,6 @@ async function onDelete(admin: Admin) {
           <el-table-column label="Actions" min-width="240" fixed="right">
             <template #default="{ row }">
               <el-button size="small" @click="openEdit(row as Admin)">Edit</el-button>
-              <el-button size="small" @click="openChangePwd(row as Admin)">Change Password</el-button>
               <el-button
                 size="small"
                 type="danger"
@@ -202,20 +176,7 @@ async function onDelete(admin: Admin) {
         </template>
       </el-dialog>
 
-      <!-- Change password dialog -->
-      <el-dialog v-model="pwdVisible" :title="`Change Password — ${pwdAdminName}`" width="400px">
-        <el-form label-width="120px">
-          <el-form-item label="New password" required>
-            <el-input v-model="pwdPassword" type="password" show-password autocomplete="new-password" />
-          </el-form-item>
-        </el-form>
-        <template #footer>
-          <el-button @click="pwdVisible = false">Cancel</el-button>
-          <el-button type="primary" :loading="pwdSaving" @click="onChangePwd">Save</el-button>
-        </template>
-      </el-dialog>
-
-      <!-- Edit dialog (username + role) -->
+      <!-- Edit dialog (username + role + optional password) -->
       <el-dialog v-model="editVisible" title="Edit Admin" width="400px">
         <el-form label-width="120px">
           <el-form-item label="Username" required>
@@ -226,6 +187,12 @@ async function onDelete(admin: Admin) {
               <el-option label="admin" value="admin" />
               <el-option label="super_admin" value="super_admin" />
             </el-select>
+          </el-form-item>
+          <el-form-item label="New password">
+            <el-input v-model="editForm.password" type="password" show-password autocomplete="new-password" />
+            <div style="margin-top: 4px">
+              <el-text type="info" size="small">Leave empty to keep the current password.</el-text>
+            </div>
           </el-form-item>
         </el-form>
         <template #footer>

@@ -154,7 +154,7 @@ async function onSubmit() {
       </el-form-item>
       <el-form-item label="Quota">
         <QuotaInput v-model="form.quota_bytes" />
-        <span class="hint">{{ formatBytes(form.quota_bytes) }} (0 = unlimited)</span>
+        <span class="hint">{{ formatBytes(form.quota_bytes) }} (0 = no quota)</span>
       </el-form-item>
       <el-form-item label="Level">
         <el-input-number v-model="form.level" :min="0" />

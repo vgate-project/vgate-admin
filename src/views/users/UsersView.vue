@@ -27,8 +27,9 @@ function usedBytes(u: User): number {
 }
 
 const usagePercent = (u: User): number => {
+  if (u.quota_bytes === -1) return -1 // -1 => unlimited
+  if (!u.quota_bytes) return -2 // 0 => no quota (blocked)
   const used = usedBytes(u)
-  if (!u.quota_bytes || u.quota_bytes <= 0) return -1 // -1 => unlimited
   const pct = (used / u.quota_bytes) * 100
   return Math.min(100, Math.max(0, pct))
 }
@@ -281,11 +282,16 @@ function onCommand(cmd: string, row: User) {
           </template>
         </el-table-column>
         <el-table-column label="Quota" width="100" prop="quota_bytes" sortable="custom">
-          <template #default="{ row }">{{ formatBytes(row.quota_bytes) }}</template>
+          <template #default="{ row }">
+            <span v-if="row.quota_bytes === -1">Unlimited</span>
+            <span v-else-if="!row.quota_bytes">No quota</span>
+            <span v-else>{{ formatBytes(row.quota_bytes) }}</span>
+          </template>
         </el-table-column>
         <el-table-column label="Usage" width="180" prop="used" sortable="custom">
           <template #default="{ row }">
-            <span v-if="usagePercent(row as User) < 0" class="usage-cell">Unlimited</span>
+            <span v-if="usagePercent(row as User) === -1" class="usage-cell">Unlimited</span>
+            <span v-else-if="usagePercent(row as User) === -2" class="usage-cell">No quota</span>
             <el-progress
                 v-else
                 class="usage-cell"

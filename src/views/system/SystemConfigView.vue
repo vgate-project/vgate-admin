@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { apiSystem } from '@/api/system'
+import { apiEmail } from '@/api/email'
 import TagListInput from '@/components/TagListInput.vue'
 
 interface ConfigRow {
@@ -242,20 +243,49 @@ const securityCat: CategoryDef = {
 const emailCat: CategoryDef = {
   key: 'email',
   label: 'Email',
-  hint: 'SMTP settings for registration verification and admin broadcast emails. Leave disabled if unused.',
+  hint: 'Outbound mail provider for registration verification and admin broadcast emails. Leave disabled if unused.',
   fields: [],
   children: [
     {
-      key: 'smtp',
-      label: 'SMTP',
-      hint: 'Outbound mail server configuration.',
+      key: 'general',
+      label: 'General',
+      hint: 'Pick the mail backend, the master switch, and the shared From address used by both SMTP and Resend. Applied after save.',
       fields: [
+        {
+          key: 'email.provider',
+          label: 'Mail Provider',
+          desc: 'smtp = traditional SMTP server; resend = Resend API. Applied after save.',
+          type: 'select',
+          options: [
+            { label: 'SMTP', value: 'smtp' },
+            { label: 'Resend', value: 'resend' },
+          ],
+        },
         {
           key: 'email.enabled',
           label: 'Enable Email',
-          desc: 'When disabled, no outbound mail is sent (verification is skipped at registration).',
+          desc: 'Master switch for outbound mail (verification is skipped when disabled).',
           type: 'switch',
         },
+        {
+          key: 'email.from',
+          label: 'From Address',
+          desc: 'Sender address shown to recipients (e.g. noreply@vgate.io). Shared by SMTP and Resend; for Resend it must be a verified domain.',
+          type: 'text',
+        },
+        {
+          key: 'email.from_name',
+          label: 'From Name',
+          desc: 'Optional display name shown next to the address, e.g. "VGate" → "VGate" <noreply@vgate.io>.',
+          type: 'text',
+        },
+      ],
+    },
+    {
+      key: 'smtp',
+      label: 'SMTP',
+      hint: 'Outbound mail server configuration (used when Provider = SMTP).',
+      fields: [
         { key: 'email.smtp_host', label: 'SMTP Host', type: 'text' },
         { key: 'email.smtp_port', label: 'SMTP Port', desc: '587 (starttls) / 465 (ssl) / 25 (none)', type: 'number' },
         {
@@ -269,8 +299,20 @@ const emailCat: CategoryDef = {
           ],
         },
         { key: 'email.smtp_user', label: 'SMTP User', desc: 'Empty = no authentication', type: 'text' },
-        { key: 'email.smtp_pass', label: 'SMTP Password', type: 'textarea' },
-        { key: 'email.smtp_from', label: 'From Address', type: 'text' },
+        { key: 'email.smtp_pass', label: 'SMTP Password', type: 'text' },
+      ],
+    },
+    {
+      key: 'resend',
+      label: 'Resend',
+      hint: 'Resend API configuration (used when Provider = Resend). Requires a verified From domain at resend.com.',
+      fields: [
+        {
+          key: 'email.resend_api_key',
+          label: 'Resend API Key',
+          desc: 'API key from the Resend dashboard. Treated as a secret.',
+          type: 'textarea',
+        },
       ],
     },
   ],
@@ -391,6 +433,7 @@ for (const c of categories) {
 const rows = ref<ConfigRow[]>([])
 const loading = ref(false)
 const saving = ref(false)
+const testing = ref(false)
 const activeTab = ref<string>(categories[0].key)
 
 function rowFor(key: string): ConfigRow | undefined {
@@ -516,6 +559,45 @@ async function saveAll() {
     load()
   } finally {
     saving.value = false
+  }
+}
+
+// testEmail sends a single test message to verify SMTP/Resend connectivity.
+// It uses the currently saved configuration, so the admin should Save first
+// after editing the email settings. The recipient defaults to the configured
+// From address but can be overridden in the prompt.
+async function testEmail() {
+  const from = rowFor('email.from')?.value || ''
+  let to = ''
+  try {
+    const { value } = await ElMessageBox.prompt(
+      'Send a test email to which address? The currently saved email configuration will be used, so save first if you changed settings.',
+      'Test Email',
+      {
+        confirmButtonText: 'Send',
+        cancelButtonText: 'Cancel',
+        inputValue: from,
+        inputPattern: /.+@.+\..+/,
+        inputErrorMessage: 'Please enter a valid email address',
+      },
+    )
+    to = value.trim()
+  } catch {
+    return // user cancelled
+  }
+
+  testing.value = true
+  try {
+    const { data } = await apiEmail.test({ to })
+    if (data.ok) {
+      ElMessage.success(data.message || 'Test email sent')
+    } else {
+      ElMessage.error(data.error || 'Failed to send test email')
+    }
+  } catch (e: any) {
+    ElMessage.error(e?.response?.data?.error || 'Failed to send test email')
+  } finally {
+    testing.value = false
   }
 }
 </script>
@@ -656,6 +738,7 @@ async function saveAll() {
 
       <div style="margin-top: 12px; display: flex; gap: 8px">
         <el-button type="primary" native-type="button" :loading="saving" @click="saveAll">Save All</el-button>
+        <el-button v-if="activeTab === 'email' && subActive['email'] === 'general'" :loading="testing" @click="testEmail">Test Email</el-button>
       </div>
     </el-card>
   </div>
