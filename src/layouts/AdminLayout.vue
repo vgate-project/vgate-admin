@@ -34,7 +34,8 @@ function onLogout() {
   <el-container class="layout">
     <el-aside :width="app.sidebarCollapsed ? '64px' : '220px'" class="aside">
       <div class="brand" @click="router.push('/dashboard')">
-        {{ app.sidebarCollapsed ? 'V' : 'VGate' }}
+        <img class="brand-logo" src="/favicon.svg" alt="VGate" />
+        <span v-if="!app.sidebarCollapsed">VGate</span>
       </div>
       <el-menu
         mode="vertical"
@@ -134,6 +135,9 @@ function onLogout() {
   overflow-x: hidden;
 }
 .brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-weight: 700;
   font-size: 1.25rem;
   color: #409eff;
@@ -142,6 +146,12 @@ function onLogout() {
   letter-spacing: 0.5px;
   white-space: nowrap;
   overflow: hidden;
+}
+.brand-logo {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 6px;
 }
 .nav {
   flex: 1;
