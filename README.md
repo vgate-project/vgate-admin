@@ -65,6 +65,13 @@ to the backend without CORS issues during local development.
 - **Tickets**: view and reply to user support tickets and move them through a status machine
   (`open → in_progress → resolved → closed`); the ticket drawer closes automatically when you
   mark a ticket closed.
+- **Email**: configure the outbound mail backend under **System Config → Email**. The **General**
+  tab holds the provider (`smtp` / `resend`), the enable switch, the shared **From** address, and
+  an optional **From Name**. Use the **Test Email** button on that tab to send a probe and verify
+  connectivity without broadcasting. (Verified-domain rules for Resend still apply.)
+- **Admins** (super-admin only): create and manage operator accounts. Change an admin's password
+  from inside the **Edit** dialog — enter a new password there, or leave it empty to keep the
+  current one.
 
 ## Configuring the API address
 
