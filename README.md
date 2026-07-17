@@ -48,6 +48,24 @@ In development, Vite proxies `/api` to the manager backend at
 `http://localhost:8081` (see `server.proxy` in `vite.config.ts`), so the admin talks
 to the backend without CORS issues during local development.
 
+## What you can do
+
+- **Nodes**: create/edit proxy nodes, set their listen port, transport (`tcp`/`ws`/`xhttp`),
+  TLS/Reality security, and per-node speed limits — all delivered to the node via the manager.
+- **Users & plans**: create users, assign subscription plans (quotas, expiry, speed caps),
+  revoke credentials, and set per-user speed limits.
+- **Orders**: view and manage billing orders.
+- **Traffic**: inspect per-user and per-node usage and stats.
+- **System config**: tune hot-reloadable settings (JWT TTLs, log level/format, CORS origins,
+  timeouts, and Telegram bot toggles) via `PUT /api/v1/admin/system-config`.
+- **Announcements**: publish notices to the user portal.
+- **Telegram**: link your personal Telegram account from **Settings → Telegram** (to receive
+  ticket alerts), and broadcast a message to every linked user from the **Telegram** view
+  (optionally also published as an announcement).
+- **Tickets**: view and reply to user support tickets and move them through a status machine
+  (`open → in_progress → resolved → closed`); the ticket drawer closes automatically when you
+  mark a ticket closed.
+
 ## Configuring the API address
 
 The API base URL is read at **runtime** from a global variable
