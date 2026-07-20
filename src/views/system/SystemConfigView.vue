@@ -326,8 +326,8 @@ const alipayCat: CategoryDef = {
     { key: 'alipay.app_id', label: 'App ID', type: 'text' },
     { key: 'alipay.private_key', label: 'App Private Key', type: 'textarea' },
     { key: 'alipay.public_key', label: 'Alipay Public Key', type: 'textarea' },
-    { key: 'alipay.notify_url', label: 'Notify URL', type: 'text' },
-    { key: 'alipay.return_url', label: 'Return URL', type: 'text' },
+    { key: 'alipay.notify_url', label: 'Notify URL', desc: 'Async payment-result callback. Alipay POSTs the signed transaction result here, so it must be a publicly reachable HTTPS URL — e.g. https://your-manager-domain.com/api/v1/billing/alipay/notify (no query string).', type: 'text' },
+    { key: 'alipay.return_url', label: 'Return URL', desc: 'Front-end landing page the user is redirected to after paying on Alipay (e.g. https://your-user-portal.com/payment/result). It is only a visual landing page, NOT a reliable payment signal — entitlement is granted via the Notify URL above.', type: 'text' },
     { key: 'alipay.sandbox', label: 'Sandbox Mode', desc: 'Use Alipay sandbox environment when enabled', type: 'switch' },
   ],
 }
@@ -342,7 +342,7 @@ const wechatCat: CategoryDef = {
     { key: 'wechat.api_v3_key', label: 'APIv3 Key', type: 'text' },
     { key: 'wechat.serial_no', label: 'API Certificate Serial No', type: 'text' },
     { key: 'wechat.private_key', label: 'Merchant Private Key (apiclient_key.pem)', type: 'textarea' },
-    { key: 'wechat.notify_url', label: 'Notify URL', type: 'text' },
+    { key: 'wechat.notify_url', label: 'Notify URL', desc: 'Async payment-result callback. WeChat Pay pushes the NATIVE transaction result here, so it must be a publicly reachable HTTPS URL — e.g. https://your-manager-domain.com/api/v1/billing/wechat/notify.', type: 'text' },
   ],
 }
 
@@ -353,8 +353,8 @@ const stripeCat: CategoryDef = {
   fields: [
     { key: 'stripe.secret_key', label: 'Secret Key', type: 'text' },
     { key: 'stripe.webhook_secret', label: 'Webhook Signing Secret', type: 'text' },
-    { key: 'stripe.success_url', label: 'Success Redirect URL', type: 'text' },
-    { key: 'stripe.cancel_url', label: 'Cancel Redirect URL', type: 'text' },
+    { key: 'stripe.success_url', label: 'Success Redirect URL', desc: 'Front-end URL Stripe redirects the user to after a successful checkout (e.g. https://your-user-portal.com/payment/success). You may append {CHECKOUT_SESSION_ID} to read the session id.', type: 'text' },
+    { key: 'stripe.cancel_url', label: 'Cancel Redirect URL', desc: 'Front-end URL Stripe redirects the user to if they cancel checkout (e.g. https://your-user-portal.com/payment/cancel). Entitlement is still granted only via the webhook at /api/v1/billing/stripe/notify.', type: 'text' },
     { key: 'stripe.currency', label: 'Currency', desc: 'ISO currency, e.g. cny; defaults to cny when empty.', type: 'text' },
   ],
 }
