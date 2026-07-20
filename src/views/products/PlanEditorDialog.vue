@@ -30,6 +30,7 @@ const DEFAULT_DAYS: Record<string, number> = {
 
 const form = reactive({
   name: '',
+  display_name: '',
   quota_bytes: 0,
   description: '',
   level: 0,
@@ -50,6 +51,7 @@ watch(
   (v) => {
     if (!v) return
     form.name = ''
+    form.display_name = ''
     form.quota_bytes = 0
     form.description = ''
     form.level = 0
@@ -61,6 +63,7 @@ watch(
     form.prices = [blankPrice()]
     if (props.plan) {
       form.name = props.plan.name
+      form.display_name = props.plan.display_name || ''
       form.quota_bytes = props.plan.quota_bytes
       form.description = props.plan.description
       form.level = props.plan.level
@@ -90,6 +93,7 @@ function onPeriodChange(p: PlanPrice) {
 function buildRequest(): PlanRequest {
   return {
     name: form.name.trim(),
+    display_name: form.display_name.trim() || undefined,
     quota_bytes: form.quota_bytes,
     description: form.description.trim() || undefined,
     level: form.level,
@@ -151,6 +155,10 @@ async function onSubmit() {
     <el-form label-width="140px">
       <el-form-item label="Name" required>
         <el-input v-model="form.name" placeholder="e.g. Premium" />
+      </el-form-item>
+      <el-form-item label="Payment product name">
+        <el-input v-model="form.display_name" placeholder="e.g. VIP Monthly" />
+        <span class="hint">Name shown on the payment gateway. Leave empty to use the global template or default.</span>
       </el-form-item>
       <el-form-item label="Quota">
         <QuotaInput v-model="form.quota_bytes" />

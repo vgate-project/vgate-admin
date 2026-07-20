@@ -359,12 +359,26 @@ const stripeCat: CategoryDef = {
   ],
 }
 
+const paymentGeneralCat: CategoryDef = {
+  key: 'payment_general',
+  label: 'General',
+  hint: 'Site-wide payment product-name fallback.',
+  fields: [
+    {
+      key: 'payment.product_name_template',
+      label: 'Product Name Template',
+      desc: 'Fallback product name sent to the payment gateway when a plan/package has no explicit "Payment product name". Placeholders: {plan} = product name, {period} = billing period, {amount} = amount in yuan. Leave empty to use the built-in default.',
+      type: 'text',
+    },
+  ],
+}
+
 const paymentCat: CategoryDef = {
   key: 'payment',
   label: 'Payment',
   hint: 'Payment provider configuration (Alipay / WeChat Pay / Stripe).',
   fields: [], // parent has no direct fields
-  children: [alipayCat, wechatCat, stripeCat], // become sub-tabs
+  children: [paymentGeneralCat, alipayCat, wechatCat, stripeCat], // become sub-tabs
 }
 
 const subscriptionCat: CategoryDef = {

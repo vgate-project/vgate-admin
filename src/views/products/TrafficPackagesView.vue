@@ -17,6 +17,7 @@ const saving = ref(false)
 
 const form = ref<TrafficPackageRequest>({
   name: '',
+  display_name: '',
   price: 0,
   quota_bytes: 0,
   validity_days: 0,
@@ -37,13 +38,14 @@ onMounted(load)
 
 function openCreate() {
   editing.value = null
-  form.value = { name: '', price: 0, quota_bytes: 0, validity_days: 0, description: '', enabled: true }
+  form.value = { name: '', display_name: '', price: 0, quota_bytes: 0, validity_days: 0, description: '', enabled: true }
   editorVisible.value = true
 }
 function openEdit(pkg: TrafficPackage) {
   editing.value = pkg
   form.value = {
     name: pkg.name,
+    display_name: pkg.display_name || '',
     price: pkg.price,
     quota_bytes: pkg.quota_bytes,
     validity_days: pkg.validity_days,
@@ -138,6 +140,10 @@ async function onDelete(pkg: TrafficPackage) {
       <el-form label-width="140px">
         <el-form-item label="Name" required>
           <el-input v-model="form.name" placeholder="e.g. 100GB Add-on" />
+        </el-form-item>
+        <el-form-item label="Payment product name">
+          <el-input v-model="form.display_name" placeholder="e.g. 100GB Traffic" />
+          <span class="hint">Name shown on the payment gateway. Leave empty to use the global template or default.</span>
         </el-form-item>
         <el-form-item label="Price (cents)" required>
           <el-input-number v-model="form.price" :min="0" :step="100" />

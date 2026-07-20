@@ -258,6 +258,7 @@ export interface PlanPrice {
 export interface Plan {
   id: string
   name: string
+  display_name?: string // optional gateway product name; empty ⇒ template/default
   quota_bytes: number
   description: string
   level: number
@@ -275,6 +276,7 @@ export interface Plan {
 
 export interface PlanRequest {
   name: string
+  display_name?: string
   quota_bytes: number
   description?: string
   level?: number
@@ -290,6 +292,7 @@ export interface PlanRequest {
 export interface TrafficPackage {
   id: string
   name: string
+  display_name?: string // optional gateway product name; empty ⇒ template/default
   price: number // cents
   quota_bytes: number
   validity_days: number // 0 = no expiry extension
@@ -301,6 +304,7 @@ export interface TrafficPackage {
 
 export interface TrafficPackageRequest {
   name: string
+  display_name?: string
   price: number // cents
   quota_bytes: number
   validity_days?: number
