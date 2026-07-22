@@ -58,6 +58,7 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     TagListInput: typeof import('./components/TagListInput.vue')['default']
+    TicketDot: typeof import('./components/TicketDot.vue')['default']
     TrafficBarChart: typeof import('./components/TrafficBarChart.vue')['default']
   }
   export interface ComponentCustomProperties {

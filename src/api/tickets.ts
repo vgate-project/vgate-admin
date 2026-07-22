@@ -11,6 +11,7 @@ export const apiTickets = {
     http.post<Ticket>(`/admin/tickets/${id}/messages`, { content }),
   setStatus: (id: string, status: TicketStatus) =>
     http.put<Ticket>(`/admin/tickets/${id}/status`, { status }),
+  unread: () => http.get<{ count: number }>('/admin/tickets/unread'),
 }
 
 export type { TicketPriority }

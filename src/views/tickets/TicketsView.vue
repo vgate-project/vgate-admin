@@ -2,9 +2,11 @@
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { apiTickets } from '@/api/tickets'
+import { useTicketStore } from '@/stores/ticket'
 import type { Ticket, TicketDetail, TicketStatus, TicketPriority } from '@/types/api'
 import { formatDateTime } from '@/utils/format'
 
+const ticketStore = useTicketStore()
 const items = ref<Ticket[]>([])
 const loading = ref(false)
 const page = ref(1)
@@ -117,6 +119,9 @@ async function openTicket(t: Ticket) {
     const { data } = await apiTickets.get(t.id)
     activeTicket.value = data.ticket
     messages.value = data.messages
+    // Opening the ticket marks it read on the backend; refresh the dot so it
+    // clears immediately rather than on the next navigation.
+    ticketStore.refresh()
   } catch {
     ElMessage.error('Failed to load ticket')
   } finally {

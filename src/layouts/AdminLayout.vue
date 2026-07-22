@@ -3,6 +3,8 @@ import { onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useAppStore } from '@/stores/app'
+import { useTicketStore } from '@/stores/ticket'
+import TicketDot from '@/components/TicketDot.vue'
 import {
   Connection,
   ChatDotRound,
@@ -22,11 +24,18 @@ import {
 
 const auth = useAuthStore()
 const app = useAppStore()
+const ticket = useTicketStore()
 const route = useRoute()
 const router = useRouter()
 
 onMounted(() => {
   app.loadSiteName()
+  ticket.refresh()
+})
+
+// Keep the Tickets unread dot fresh across navigation without a full reload.
+router.afterEach(() => {
+  ticket.refresh()
 })
 
 function onLogout() {
@@ -92,7 +101,7 @@ function onLogout() {
         </el-menu-item>
         <el-menu-item index="/tickets">
           <el-icon><ChatLineRound /></el-icon>
-          <template #title>Tickets</template>
+          <template #title>Tickets<TicketDot /></template>
         </el-menu-item>
         <el-menu-item v-if="auth.isSuperAdmin" index="/system-config">
           <el-icon><Setting /></el-icon>
@@ -104,9 +113,11 @@ function onLogout() {
         </el-menu-item>
       </el-menu>
       <div class="aside-footer" :class="{ collapsed: app.sidebarCollapsed }">
-        <el-tag v-if="!app.sidebarCollapsed" size="small" class="user-tag">
-          {{ auth.username }}
-        </el-tag>
+        <el-tooltip v-if="!app.sidebarCollapsed" :content="auth.username" placement="top">
+          <el-tag size="small" class="user-tag">
+            {{ auth.username }}
+          </el-tag>
+        </el-tooltip>
         <div class="footer-actions">
           <el-button v-if="!app.sidebarCollapsed" text @click="onLogout">Logout</el-button>
           <el-button
@@ -164,26 +175,31 @@ function onLogout() {
 }
 .aside-footer {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
   gap: 8px;
   padding: 12px 16px;
   border-top: 1px solid #e4e7ed;
 }
 .aside-footer.collapsed {
-  justify-content: center;
+  align-items: center;
   padding: 10px;
 }
+/* The tooltip wrapper must be full-width so the tag can stretch. */
+.aside-footer .el-tooltip {
+  width: 100%;
+}
 .user-tag {
+  width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100%;
+  white-space: nowrap;
 }
 .footer-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 4px;
-  margin-left: auto;
 }
 .main {
   padding: 24px;

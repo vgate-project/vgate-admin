@@ -266,10 +266,11 @@ function onCommand(cmd: string, row: User) {
           :data="users"
           v-loading="loading"
           empty-text="No users yet"
-          max-height="calc(100vh - 20px)"
+          max-height="70vh"
           @sort-change="onSortChange"
       >
-        <el-table-column prop="email" label="Email" width="180" sortable="custom"/>
+        <el-table-column type="index" width="50" />
+        <el-table-column prop="email" label="Email" width="240" sortable="custom"/>
         <el-table-column prop="username" label="Username" width="120" sortable="custom">
           <template #default="{ row }">{{ row.username ?? '—' }}</template>
         </el-table-column>
@@ -308,7 +309,7 @@ function onCommand(cmd: string, row: User) {
         <el-table-column label="Download" width="120" prop="down_total" sortable="custom">
           <template #default="{ row }">{{ formatBytes(row.down_total) }}</template>
         </el-table-column>
-        <el-table-column label="Expire" width="160" prop="expire_at" sortable="custom">
+        <el-table-column label="Expire" width="180" prop="expire_at" sortable="custom">
           <template #default="{ row }">{{ formatDateTime(row.expire_at) }}</template>
         </el-table-column>
         <el-table-column label="Actions" min-width="50" fixed="right">
