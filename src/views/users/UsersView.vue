@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {computed, onMounted, ref} from 'vue'
+import {computed, onMounted, reactive, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {apiUsers} from '@/api/users'
 import type {User} from '@/types/api'
@@ -8,7 +8,7 @@ import UserEditorDialog from './UserEditorDialog.vue'
 import UserPasswordDialog from './UserPasswordDialog.vue'
 import UserNodesDialog from './UserNodesDialog.vue'
 import CopyableTokenDialog from '@/components/CopyableTokenDialog.vue'
-import {ArrowDown} from '@element-plus/icons-vue'
+import {ArrowDown, Delete, Plus} from '@element-plus/icons-vue'
 
 const users = ref<User[]>([])
 const loading = ref(false)
@@ -202,6 +202,80 @@ function onSaved() {
   ElMessage.success('User saved')
 }
 
+// --- Zombie-user cleanup ---
+// A user is a zombie only if it matches ALL selected criteria. The dialog lets
+// a super-admin preview the matching count before committing the bulk delete.
+const cleanupVisible = ref(false)
+const cleanup = reactive({
+  never_used_proxy: true,
+  email_unverified: true,
+  no_paid_orders: true,
+  inactive_enabled: true,
+  inactive_days: 30,
+  min_account_days: 7, // protect accounts younger than this
+  protect_active_subs: true, // never delete users with an unexpired subscription
+})
+const cleanupCount = ref<number | null>(null)
+const previewing = ref(false)
+const cleaning = ref(false)
+
+// At least one criterion must be active or the backend rejects the request.
+const cleanupValid = computed(
+    () =>
+        cleanup.never_used_proxy ||
+        cleanup.email_unverified ||
+        cleanup.no_paid_orders ||
+        cleanup.inactive_enabled,
+)
+
+function zombieFilter() {
+  return {
+    never_used_proxy: cleanup.never_used_proxy,
+    email_unverified: cleanup.email_unverified,
+    no_paid_orders: cleanup.no_paid_orders,
+    inactive_days: cleanup.inactive_enabled ? cleanup.inactive_days : 0,
+    min_account_days: cleanup.min_account_days,
+    protect_active_subs: cleanup.protect_active_subs,
+  }
+}
+
+function openCleanup() {
+  cleanupCount.value = null
+  cleanupVisible.value = true
+}
+
+async function onPreviewZombies() {
+  previewing.value = true
+  cleanupCount.value = null
+  try {
+    const {data} = await apiUsers.previewZombies(zombieFilter())
+    cleanupCount.value = data.count
+  } finally {
+    previewing.value = false
+  }
+}
+
+async function onCleanupZombies() {
+  try {
+    await ElMessageBox.confirm(
+        `Delete ${cleanupCount.value ?? 'the'} matching zombie user(s)? This cannot be undone.`,
+        'Confirm cleanup',
+        {type: 'warning'},
+    )
+  } catch {
+    return
+  }
+  cleaning.value = true
+  try {
+    const {data} = await apiUsers.cleanupZombies(zombieFilter())
+    ElMessage.success(`Deleted ${data.deleted} zombie user(s)`)
+    cleanupVisible.value = false
+    load()
+  } finally {
+    cleaning.value = false
+  }
+}
+
 // Map an action dropdown command to its handler.
 function onCommand(cmd: string, row: User) {
   switch (cmd) {
@@ -231,12 +305,20 @@ function onCommand(cmd: string, row: User) {
   <div>
     <div class="toolbar">
       <h2>Users</h2>
-      <el-button type="primary" @click="openCreate">
-        <el-icon>
-          <Plus/>
-        </el-icon>
-        <span>New User</span>
-      </el-button>
+      <div class="toolbar-actions">
+        <el-button type="primary" @click="openCreate">
+          <el-icon>
+            <Plus/>
+          </el-icon>
+          <span>New User</span>
+        </el-button>
+        <el-button @click="openCleanup">
+          <el-icon>
+            <Delete/>
+          </el-icon>
+          <span>Clean up zombies</span>
+        </el-button>
+      </div>
     </div>
 
     <div class="filters">
@@ -367,6 +449,79 @@ function onCommand(cmd: string, row: User) {
         :title="subTitle"
         :items="subItems"
     />
+
+    <el-dialog v-model="cleanupVisible" title="Clean up zombie users" width="540px">
+      <p class="muted">
+        A user is cleaned up only if it matches <strong>all</strong> selected criteria below.
+        Safeguards always protect the corresponding users, even if they match the criteria.
+        Preview the count before deleting.
+      </p>
+
+      <div class="cfg-section">
+        <div class="cfg-section-title">
+          Zombie criteria <span class="cfg-hint">must match ALL</span>
+        </div>
+        <el-checkbox v-model="cleanup.never_used_proxy">
+          Never used the proxy (no traffic, never connected)
+        </el-checkbox>
+        <el-checkbox v-model="cleanup.email_unverified">
+          Email not verified
+        </el-checkbox>
+        <el-checkbox v-model="cleanup.no_paid_orders">
+          No paid orders
+        </el-checkbox>
+        <div class="check-row">
+          <el-checkbox v-model="cleanup.inactive_enabled">Inactive for at least</el-checkbox>
+          <el-input-number
+              v-model="cleanup.inactive_days"
+              :min="1"
+              :max="3650"
+              :disabled="!cleanup.inactive_enabled"
+              controls-position="right"
+          />
+          <span class="suffix">days (last traffic older than this, or never)</span>
+        </div>
+      </div>
+
+      <div class="cfg-section">
+        <div class="cfg-section-title">
+          Safeguards <span class="cfg-hint">always protected</span>
+        </div>
+        <div class="check-row">
+          <span class="label">Protect accounts newer than</span>
+          <el-input-number
+              v-model="cleanup.min_account_days"
+              :min="0"
+              :max="3650"
+              controls-position="right"
+          />
+          <span class="suffix">days (0 = off)</span>
+        </div>
+        <el-checkbox v-model="cleanup.protect_active_subs">
+          Never delete users with an active (unexpired) subscription
+        </el-checkbox>
+      </div>
+
+      <div class="preview">
+        <el-button :loading="previewing" :disabled="!cleanupValid" @click="onPreviewZombies">
+          Preview count
+        </el-button>
+        <span v-if="cleanupCount !== null" class="count">
+          {{ cleanupCount }} matching user(s)
+        </span>
+      </div>
+      <template #footer>
+        <el-button @click="cleanupVisible = false">Cancel</el-button>
+        <el-button
+            type="danger"
+            :disabled="!cleanupValid || cleaning"
+            :loading="cleaning"
+            @click="onCleanupZombies"
+        >
+          Delete zombies
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -376,6 +531,18 @@ function onCommand(cmd: string, row: User) {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Neutralize Element Plus's default 12px margin between adjacent buttons so
+   the gap above is the only spacing within the toolbar action group. */
+.toolbar-actions .el-button + .el-button {
+  margin-left: 0;
 }
 
 .filters {
@@ -410,6 +577,63 @@ function onCommand(cmd: string, row: User) {
 .pager {
   margin-top: 12px;
   justify-content: flex-end;
+}
+
+.muted {
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+  margin: 0 0 12px;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 0;
+}
+
+.cfg-section {
+  padding: 12px 14px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cfg-section-title {
+  font-weight: 600;
+  font-size: 13px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.cfg-hint {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.check-row .suffix {
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
+.check-row .label {
+  font-size: 14px;
+}
+
+.preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.preview .count {
+  font-weight: 600;
 }
 
 h2 {

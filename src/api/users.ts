@@ -8,6 +8,17 @@ export interface UserListParams {
   order?: 'asc' | 'desc'
 }
 
+// ZombieFilter mirrors dto.ZombieFilterRequest on the backend. A user is a
+// zombie only if it satisfies every selected criterion.
+export interface ZombieFilter {
+  never_used_proxy: boolean
+  email_unverified: boolean
+  no_paid_orders: boolean
+  inactive_days: number // 0 disables the inactivity criterion
+  min_account_days: number // 0 disables the guard; protects new signups
+  protect_active_subs: boolean // never delete users with an unexpired subscription
+}
+
 export const apiUsers = {
   list: (page = 1, pageSize = 20, params: UserListParams = {}) => {
     const query: Record<string, unknown> = { page, page_size: pageSize }
@@ -30,4 +41,8 @@ export const apiUsers = {
   nodes: (id: string) => http.get<Node[]>(`/admin/users/${id}/nodes`),
   setNodes: (id: string, nodeIds: string[]) =>
     http.put(`/admin/users/${id}/nodes`, { node_ids: nodeIds }),
+  previewZombies: (f: ZombieFilter) =>
+    http.post<{ count: number }>('/admin/users/zombies/preview', f),
+  cleanupZombies: (f: ZombieFilter) =>
+    http.post<{ deleted: number }>('/admin/users/zombies/cleanup', f),
 }
