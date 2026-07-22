@@ -156,6 +156,12 @@ const usersCat: CategoryDef = {
           desc: 'When enabled, new accounts stay inactive until the user verifies their email via the link we send.',
           type: 'switch',
         },
+        {
+          key: 'user.register_email_suffix_whitelist',
+          label: 'Allowed Email Domains',
+          desc: 'Restrict registration to these email domains (exact match, one domain per tag). Leave empty to allow any domain.',
+          type: 'tags',
+        },
       ],
     },
     {
