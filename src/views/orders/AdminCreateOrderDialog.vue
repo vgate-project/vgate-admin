@@ -23,7 +23,6 @@ const form = reactive({
   plan_price_id: '' as string,
   traffic_package_id: '' as string,
   plan_id: '' as string,
-  channel: 'pc' as 'pc' | 'wap',
   platform: 'alipay' as string,
 })
 
@@ -81,7 +80,6 @@ watch(
     form.plan_price_id = ''
     form.traffic_package_id = ''
     form.plan_id = ''
-    form.channel = 'pc'
     form.platform = 'alipay'
     ensureData()
   },
@@ -115,7 +113,6 @@ async function onSubmit() {
       kind: 'plan',
       plan_id: opt.plan_id,
       plan_price_id: opt.value,
-      channel: form.channel,
       platform: form.platform,
     }
   } else if (form.kind === 'traffic') {
@@ -127,7 +124,6 @@ async function onSubmit() {
       user_id: form.user_id,
       kind: 'traffic',
       traffic_package_id: form.traffic_package_id,
-      channel: form.channel,
       platform: form.platform,
     }
   } else {
@@ -139,7 +135,6 @@ async function onSubmit() {
       user_id: form.user_id,
       kind: 'reset',
       plan_id: form.plan_id,
-      channel: form.channel,
       platform: form.platform,
     }
   }
@@ -238,12 +233,6 @@ function userLabel(u: User): string {
         </el-select>
       </el-form-item>
 
-      <el-form-item label="Channel" v-if="form.platform === 'alipay'">
-        <el-radio-group v-model="form.channel">
-          <el-radio value="pc">PC (page.pay)</el-radio>
-          <el-radio value="wap">Mobile (wap.pay)</el-radio>
-        </el-radio-group>
-      </el-form-item>
     </el-form>
     <template #footer>
       <el-button @click="emit('update:modelValue', false)">Cancel</el-button>

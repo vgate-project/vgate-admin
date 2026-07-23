@@ -334,7 +334,6 @@ export interface Order {
   platform?: string // payment gateway: alipay | manual | (future)
   out_trade_no: string
   trade_no?: string
-  channel: 'pc' | 'wap'
   paid_at?: string
   expired_at?: string
   created_at: string
@@ -346,7 +345,6 @@ export interface CreateOrderRequest {
   plan_id?: string
   plan_price_id?: string
   traffic_package_id?: string
-  channel?: 'pc' | 'wap'
   platform?: string // payment gateway; defaults to alipay
 }
 
@@ -356,7 +354,6 @@ export interface AdminCreateOrderRequest {
   plan_id?: string
   plan_price_id?: string
   traffic_package_id?: string
-  channel?: 'pc' | 'wap'
   platform?: string // payment gateway; defaults to alipay
 }
 

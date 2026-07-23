@@ -422,7 +422,6 @@ const alipayCat: CategoryDef = {
     { key: 'alipay.private_key', label: 'App Private Key', type: 'textarea' },
     { key: 'alipay.public_key', label: 'Alipay Public Key', type: 'textarea' },
     { key: 'alipay.notify_url', label: 'Notify URL', desc: 'Async payment-result callback. Alipay POSTs the signed transaction result here, so it must be a publicly reachable HTTPS URL — e.g. https://your-manager-domain.com/api/v1/billing/alipay/notify (no query string).', type: 'text' },
-    { key: 'alipay.return_url', label: 'Return URL', desc: 'Front-end landing page the user is redirected to after paying on Alipay (e.g. https://your-user-portal.com/payment/result). It is only a visual landing page, NOT a reliable payment signal — entitlement is granted via the Notify URL above.', type: 'text' },
     { key: 'alipay.sandbox', label: 'Sandbox Mode', desc: 'Use Alipay sandbox environment when enabled', type: 'switch' },
   ],
 }
