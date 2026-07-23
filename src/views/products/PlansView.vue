@@ -110,6 +110,14 @@ async function onDelete(plan: Plan) {
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="Renew off-shelf" width="130">
+          <template #default="{ row }">
+            <el-tag v-if="row.allow_renew_off_shelf" :type="row.enabled ? 'info' : 'warning'" size="small">
+              allowed
+            </el-tag>
+            <span v-else class="muted">—</span>
+          </template>
+        </el-table-column>
         <el-table-column label="Actions" width="160" fixed="right">
           <template #default="{ row }">
             <div v-if="auth.isSuperAdmin" class="actions">

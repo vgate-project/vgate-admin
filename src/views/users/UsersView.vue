@@ -34,6 +34,11 @@ const usagePercent = (u: User): number => {
   return Math.min(100, Math.max(0, pct))
 }
 
+// A user is expired when they have a finite expiry that has already passed.
+function isExpired(u: User): boolean {
+  return !!u.expire_at && new Date(u.expire_at).getTime() < Date.now()
+}
+
 const editorVisible = ref(false)
 const editingUser = ref<User | null>(null)
 
@@ -352,7 +357,16 @@ function onCommand(cmd: string, row: User) {
           @sort-change="onSortChange"
       >
         <el-table-column type="index" width="50" />
-        <el-table-column prop="email" label="Email" width="240" sortable="custom"/>
+        <el-table-column prop="email" label="Email" width="300" sortable="custom">
+          <template #default="{ row }">
+            <div style="display: flex; align-items: center; gap: 6px">
+              <span>{{ row.email }}</span>
+              <el-tag v-if="isExpired(row as User)" type="warning" size="small" effect="plain">
+                Expired
+              </el-tag>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="username" label="Username" width="120" sortable="custom">
           <template #default="{ row }">{{ row.username ?? '—' }}</template>
         </el-table-column>

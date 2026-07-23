@@ -39,6 +39,7 @@ const form = reactive({
   speed_limit_down_mbps: 0,
   reset_enabled: false,
   reset_price: 0,
+  allow_renew_off_shelf: false,
   prices: [] as PlanPrice[],
 })
 
@@ -72,6 +73,7 @@ watch(
       form.speed_limit_down_mbps = Math.round((props.plan.speed_limit_down_bps ?? 0) / BPS_PER_MBPS)
       form.reset_enabled = props.plan.reset_enabled ?? false
       form.reset_price = props.plan.reset_price ?? 0
+      form.allow_renew_off_shelf = props.plan.allow_renew_off_shelf ?? false
       form.prices = (props.plan.prices && props.plan.prices.length ? props.plan.prices : [blankPrice()]).map(
         (p) => ({ ...p, duration_days: p.duration_days || DEFAULT_DAYS[p.period] || 30 }),
       )
@@ -102,6 +104,7 @@ function buildRequest(): PlanRequest {
     speed_limit_down_bps: Math.round(form.speed_limit_down_mbps * BPS_PER_MBPS),
     reset_enabled: form.reset_enabled,
     reset_price: form.reset_price,
+    allow_renew_off_shelf: form.allow_renew_off_shelf,
     prices: form.prices.map((p, i) => ({
       id: p.id,
       period: p.period,
@@ -152,7 +155,7 @@ async function onSubmit() {
     width="680px"
     @update:model-value="emit('update:modelValue', $event)"
   >
-    <el-form label-width="140px">
+    <el-form label-width="160px">
       <el-form-item label="Name" required>
         <el-input v-model="form.name" placeholder="e.g. Premium" />
       </el-form-item>
@@ -173,6 +176,10 @@ async function onSubmit() {
       </el-form-item>
       <el-form-item label="Enabled">
         <el-switch v-model="form.enabled" />
+      </el-form-item>
+      <el-form-item label="Renew when off-shelf">
+        <el-switch v-model="form.allow_renew_off_shelf" />
+        <span class="hint">Allow the plan's current owner to renew it after it is disabled (off-shelf). New users can never buy an off-shelf plan.</span>
       </el-form-item>
 
       <el-divider>Billing</el-divider>

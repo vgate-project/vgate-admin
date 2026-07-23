@@ -263,6 +263,9 @@ export interface Plan {
   description: string
   level: number
   enabled: boolean
+  // AllowRenewOffShelf lets the plan's current owner renew it after the plan is
+  // disabled (off-shelf). New users can never purchase an off-shelf plan.
+  allow_renew_off_shelf?: boolean
   // Per-user speed cap delivered by this plan (bytes/sec, 0 = unlimited).
   speed_limit_up_bps?: number
   speed_limit_down_bps?: number
@@ -285,6 +288,7 @@ export interface PlanRequest {
   speed_limit_down_bps?: number
   reset_enabled?: boolean
   reset_price?: number // cents
+  allow_renew_off_shelf?: boolean
   prices: PlanPrice[]
 }
 

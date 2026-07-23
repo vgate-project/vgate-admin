@@ -4,13 +4,14 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { apiSystem } from '@/api/system'
 import { apiEmail } from '@/api/email'
 import TagListInput from '@/components/TagListInput.vue'
+import QuotaInput from '@/components/QuotaInput.vue'
 
 interface ConfigRow {
   key: string
   value: string
 }
 
-type FieldType = 'number' | 'text' | 'textarea' | 'select' | 'switch' | 'tags' | 'lines'
+type FieldType = 'number' | 'quota' | 'text' | 'textarea' | 'select' | 'switch' | 'tags' | 'lines'
 
 interface FieldDef {
   key: string
@@ -127,6 +128,38 @@ const systemCat: CategoryDef = {
   ],
 }
 
+const reminderCat: CategoryDef = {
+  key: 'reminder',
+  label: 'Traffic Reminders',
+  hint: 'Notify users when they near their quota (by usage %) or when few days remain before the monthly reset. Users pick the channel (email / Telegram) on their profile. Applied immediately after save.',
+  fields: [
+    {
+      key: 'reminder.enabled',
+      label: 'Enable Reminders',
+      desc: 'Master switch for traffic reminders. When disabled, no reminders are sent regardless of the thresholds below.',
+      type: 'switch',
+    },
+    {
+      key: 'reminder.pct_threshold',
+      label: 'Usage Threshold (%)',
+      desc: 'Send a reminder when a user has used this percentage of their quota (1-100). Example: 80 sends when 80% of quota_bytes is consumed.',
+      type: 'number',
+    },
+    {
+      key: 'reminder.days_threshold',
+      label: 'Days Remaining Threshold',
+      desc: 'Send a reminder when at most this many days remain until the monthly quota reset (only for users with "Monthly reset" enabled). Example: 3 sends when 3 or fewer days are left.',
+      type: 'number',
+    },
+    {
+      key: 'reminder.cooldown_days',
+      label: 'Cooldown (days)',
+      desc: 'Minimum days between reminders sent to the same user, so a user is not notified more than once per this window (>= 1).',
+      type: 'number',
+    },
+  ],
+}
+
 const usersCat: CategoryDef = {
   key: 'users',
   label: 'Users',
@@ -205,6 +238,62 @@ const usersCat: CategoryDef = {
           key: 'quota.reset_day',
           label: 'Quota Reset Day',
           desc: 'Global monthly quota reset day (1-28). Applied to users with "Monthly reset" enabled. All opted-in users reset on this day.',
+          type: 'number',
+        },
+      ],
+    },
+    {
+      key: 'trial',
+      label: 'Trial',
+      hint: 'Automatic one-time free trial granted to every new user on signup.',
+      fields: [
+        {
+          key: 'user.trial_enabled',
+          label: 'Enable New-User Trial',
+          desc: 'When enabled, every newly registered user automatically receives a one-time free trial (free traffic quota + optional validity window).',
+          type: 'switch',
+        },
+        {
+          key: 'user.trial_quota_bytes',
+          label: 'Trial Traffic Quota',
+          desc: 'Free traffic granted to each new user. Pick a unit (GB/MB/KB/B); the value is stored as bytes. 0 disables the grant even when the trial is enabled.',
+          type: 'quota',
+        },
+        {
+          key: 'user.trial_duration_days',
+          label: 'Trial Duration (days)',
+          desc: 'How many days the trial stays valid. 0 = no expiry (the trial lasts until the quota is consumed).',
+          type: 'number',
+        },
+      ],
+    },
+    {
+      key: 'reminder',
+      label: 'Traffic Reminders',
+      hint: 'User-facing traffic reminders. Users pick the channel (email / Telegram) on their profile.',
+      fields: [
+        {
+          key: 'reminder.enabled',
+          label: 'Enable Reminders',
+          desc: 'Master switch for traffic reminders. When disabled, no reminders are sent regardless of the thresholds below.',
+          type: 'switch',
+        },
+        {
+          key: 'reminder.pct_threshold',
+          label: 'Usage Threshold (%)',
+          desc: 'Send a reminder when a user has used this percentage of their quota (1-100). Example: 80 sends when 80% of quota_bytes is consumed.',
+          type: 'number',
+        },
+        {
+          key: 'reminder.days_threshold',
+          label: 'Days Remaining Threshold',
+          desc: 'Send a reminder when at most this many days remain until the monthly quota reset (only for users with "Monthly reset" enabled). Example: 3 sends when 3 or fewer days are left.',
+          type: 'number',
+        },
+        {
+          key: 'reminder.cooldown_days',
+          label: 'Cooldown (days)',
+          desc: 'Minimum days between reminders sent to the same user, so a user is not notified more than once per this window (>= 1).',
           type: 'number',
         },
       ],
@@ -463,9 +552,10 @@ function rowFor(key: string): ConfigRow | undefined {
 // Read a field's value converted to the control's expected type.
 function fieldValue(f: FieldDef): any {
   const row = rowFor(f.key)
-  if (!row) return f.type === 'number' ? 0 : f.type === 'switch' ? false : f.type === 'tags' ? [] : ''
+  if (!row) return f.type === 'number' || f.type === 'quota' ? 0 : f.type === 'switch' ? false : f.type === 'tags' ? [] : ''
   switch (f.type) {
     case 'number':
+    case 'quota':
       return parseInt(row.value, 10) || 0
     case 'switch':
       return row.value === 'true'
@@ -501,6 +591,7 @@ function setFieldValue(f: FieldDef, val: any) {
   }
   switch (f.type) {
     case 'number':
+    case 'quota':
       row.value = String(val ?? 0)
       break
     case 'switch':
@@ -646,6 +737,11 @@ async function testEmail() {
                     :min="0"
                     controls-position="right"
                   />
+                  <QuotaInput
+                    v-else-if="f.type === 'quota'"
+                    :model-value="fieldValue(f)"
+                    @update:model-value="(v: number) => setFieldValue(f, v)"
+                  />
                   <el-select
                     v-else-if="f.type === 'select'"
                     :model-value="fieldValue(f)"
@@ -705,6 +801,11 @@ async function testEmail() {
                 @update:model-value="(v: number | undefined) => setFieldValue(f, v)"
                 :min="0"
                 controls-position="right"
+              />
+              <QuotaInput
+                v-else-if="f.type === 'quota'"
+                :model-value="fieldValue(f)"
+                @update:model-value="(v: number) => setFieldValue(f, v)"
               />
               <el-select
                 v-else-if="f.type === 'select'"
