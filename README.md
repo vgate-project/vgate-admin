@@ -11,7 +11,7 @@ used when operators or users create paid orders.
 ## Tech stack
 
 - [Vue 3](https://vuejs.org/) (Composition API, `<script setup>`)
-- [Vite](https://vitejs.dev/) — dev server & build tool
+- [Vite](https://vitejs.dev/) — dev server and build tool
 - [TypeScript](https://www.typescriptlang.org/)
 - [Element Plus](https://element-plus.org/) — UI components (auto-imported)
 - [Pinia](https://pinia.vuejs.org/) — state management
@@ -59,6 +59,8 @@ to the backend without CORS issues during local development.
 - **System config**: tune hot-reloadable settings (JWT TTLs, log level/format, CORS origins,
   timeouts, and Telegram bot toggles) via `PUT /api/v1/admin/system-config`.
 - **Announcements**: publish notices to the user portal.
+- **Invites**: create and manage invite codes that gate or credit new registrations.
+- **Redemption codes**: issue and track redemption codes that users apply from the portal (`/redeem`) to claim plans or credit.
 - **Telegram**: link your personal Telegram account from **Settings → Telegram** (to receive
   ticket alerts), and broadcast a message to every linked user from the **Telegram** view
   (optionally also published as an announcement).
@@ -66,7 +68,7 @@ to the backend without CORS issues during local development.
   (`open → in_progress → resolved → closed`); the ticket drawer closes automatically when you
   mark a ticket closed.
 - **Email**: configure the outbound mail backend under **System Config → Email**. The **General**
-  tab holds the provider (`smtp` / `resend`), the enable switch, the shared **From** address, and
+  tab holds the provider (`smtp` / `resend`), the enabled switch, the shared **From** address, and
   an optional **From Name**. Use the **Test Email** button on that tab to send a probe and verify
   connectivity without broadcasting. (Verified-domain rules for Resend still apply.)
 - **Admins** (super-admin only): create and manage operator accounts. Change an admin's password
@@ -90,7 +92,7 @@ window.__ENV__ = { API_BASE_URL: '' }   // ''  → relative /api/v1 (reverse-pro
 ```
 
 - Leave `API_BASE_URL` empty when the frontend and backend are served from the same
-  origin (e.g. behind an Nginx reverse proxy that routes `/api` to the manager).
+  origin (e.g., behind an Nginx reverse proxy that routes `/api` to the manager).
 - Set the full backend URL (including the `/api/v1` path) when the manager runs on a
   different host/port. In that case the manager must allow the frontend origin via
   its CORS `allowed_origins` system config.
