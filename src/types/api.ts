@@ -323,11 +323,11 @@ export interface Order {
   id: string
   user_id: string
   kind: string // plan | traffic
-  plan_id: string
+  plan_id?: string // omitted (omitempty) for non-plan orders
   plan_price_id?: string
   period?: string
   duration_days: number
-  traffic_package_id: string
+  traffic_package_id?: string // omitted (omitempty) for non-traffic orders
   validity_days: number
   amount: number // cents
   status: OrderStatus
@@ -359,7 +359,7 @@ export interface AdminCreateOrderRequest {
 
 export interface CreateOrderResponse {
   order: Order
-  pay_url: string // redirect URL (alipay/stripe) or QR content (wechat code_url)
+  pay_url: string // QR content (alipay trade.precreate / wechat code_url) or redirect URL (stripe)
   // How to present pay_url to the user: "redirect" (open in browser) or
   // "qr" (render pay_url as a QR code to scan, e.g. wechat NATIVE).
   pay_mode?: 'redirect' | 'qr'

@@ -58,8 +58,8 @@ async function loadPackages() {
 }
 
 function productName(row: Order): string {
-  if (row.kind === 'plan') return planMap.value[row.plan_id] ?? row.plan_id
-  return packageMap.value[row.traffic_package_id] ?? row.traffic_package_id
+  if (row.kind === 'plan') return planMap.value[row.plan_id!] ?? row.plan_id
+  return packageMap.value[row.traffic_package_id!] ?? row.traffic_package_id
 }
 
 async function load() {
