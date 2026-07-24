@@ -9,7 +9,7 @@ import type { Plan, User, TrafficPackage, AdminCreateOrderRequest } from '@/type
 import { formatPrice, formatBytes } from '@/utils/format'
 
 const props = defineProps<{ modelValue: boolean }>()
-const emit = defineEmits<{ 'update:modelValue': [boolean]; created: [string, string?] }>()
+const emit = defineEmits<{ 'update:modelValue': [boolean]; created: [string, string?, string?] }>()
 
 const saving = ref(false)
 const users = ref<User[]>([])
@@ -143,7 +143,7 @@ async function onSubmit() {
   try {
     const { data } = await apiOrders.createForUser(body)
     ElMessage.success('Order created')
-    emit('created', data.pay_url, data.pay_mode)
+    emit('created', data.pay_url, data.pay_mode, data.order?.platform ?? form.platform)
     emit('update:modelValue', false)
   } finally {
     saving.value = false

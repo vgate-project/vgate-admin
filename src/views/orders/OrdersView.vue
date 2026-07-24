@@ -34,6 +34,7 @@ const tokenItems = ref<{ label: string; value: string; mono?: boolean }[]>([])
 const payVisible = ref(false)
 const payUrl = ref('')
 const payMode = ref<'redirect' | 'qr'>('redirect')
+const payPlatform = ref('')
 
 async function loadPlans() {
   try {
@@ -119,9 +120,10 @@ function statusTag(status: OrderStatus): 'warning' | 'success' | 'info' {
   return 'info'
 }
 
-function onOrderCreated(url: string, payModeValue?: string) {
+function onOrderCreated(url: string, payModeValue?: string, platformValue?: string) {
   payUrl.value = url
   payMode.value = payModeValue === 'qr' ? 'qr' : 'redirect'
+  payPlatform.value = platformValue ?? ''
   payVisible.value = true
   load()
 }
@@ -255,6 +257,7 @@ async function onStatusChange(row: Order, status: Exclude<OrderStatus, 'pending'
         v-model="payVisible"
         :pay-url="payUrl"
         :pay-mode="payMode"
+        :platform="payPlatform"
         title="Order payment"
     />
   </div>

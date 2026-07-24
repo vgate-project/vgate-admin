@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import QRCode from 'qrcode'
 
@@ -7,12 +7,26 @@ const props = defineProps<{
   modelValue: boolean
   payUrl: string
   payMode?: string
+  platform?: string
   title?: string
 }>()
 const emit = defineEmits<{ 'update:modelValue': [boolean] }>()
 
 const qr = ref('')
 const error = ref(false)
+
+// Describe the QR payment in a provider-aware way; the dialog previously
+// hardcoded "WeChat" regardless of the actual gateway.
+const qrHint = computed(() => {
+  switch (props.platform) {
+    case 'alipay':
+      return 'Scan this QR code with Alipay to pay.'
+    case 'wechat':
+      return 'Scan this QR code with WeChat to pay.'
+    default:
+      return 'Scan this QR code to pay.'
+  }
+})
 
 async function copy() {
   try {
@@ -48,7 +62,7 @@ watch(
     @update:model-value="emit('update:modelValue', $event)"
   >
     <div v-if="payMode === 'qr'">
-      <p style="margin-top: 0">Scan this QR code with WeChat to pay.</p>
+      <p style="margin-top: 0">{{ qrHint }}</p>
       <div v-if="qr" style="text-align: center">
         <img :src="qr" alt="payment qr" style="width: 240px; height: 240px" />
       </div>
