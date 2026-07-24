@@ -7,8 +7,10 @@ import { formatBytes, formatPrice } from '@/utils/format'
 import PlanEditorDialog from './PlanEditorDialog.vue'
 import {Plus} from "@element-plus/icons-vue";
 import { useAuthStore } from '@/stores/auth'
+import { useReferenceStore } from '@/stores/reference'
 
 const auth = useAuthStore()
+const reference = useReferenceStore()
 
 const periodLabels: Record<string, string> = {
   month: 'Monthly',
@@ -20,22 +22,12 @@ function periodLabel(p: string): string {
   return periodLabels[p] || p
 }
 
-const plans = ref<Plan[]>([])
-const loading = ref(false)
-
 const editorVisible = ref(false)
 const editingPlan = ref<Plan | null>(null)
 
-async function load() {
-  loading.value = true
-  try {
-    const { data } = await apiPlans.list()
-    plans.value = data
-  } finally {
-    loading.value = false
-  }
-}
-onMounted(load)
+onMounted(() => {
+  void reference.get()
+})
 
 function openCreate() {
   editingPlan.value = null
@@ -53,7 +45,12 @@ async function onDelete(plan: Plan) {
   }
   await apiPlans.remove(plan.id)
   ElMessage.success('Plan deleted')
-  load()
+  await reference.refresh()
+}
+async function onSaved() {
+  // A plan was created or updated in the editor; refresh the cached catalog so
+  // every consumer (orders, redemption codes, …) sees the change.
+  await reference.refresh()
 }
 </script>
 
@@ -66,7 +63,7 @@ async function onDelete(plan: Plan) {
       </el-button>
     </div>
     <el-card shadow="never">
-      <el-table :data="plans" v-loading="loading" empty-text="No plans yet">
+      <el-table :data="reference.plans" v-loading="reference.loading" empty-text="No plans yet">
         <el-table-column prop="name" label="Name" width="160" />
         <el-table-column label="Prices" min-width="220">
           <template #default="{ row }">
@@ -134,7 +131,7 @@ async function onDelete(plan: Plan) {
       </el-table>
     </el-card>
 
-    <PlanEditorDialog v-model="editorVisible" :plan="editingPlan" @saved="load" />
+    <PlanEditorDialog v-model="editorVisible" :plan="editingPlan" @saved="onSaved" />
   </div>
 </template>
 

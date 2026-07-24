@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, onBeforeUnmount, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useAppStore } from '@/stores/app'
@@ -28,14 +28,21 @@ const ticket = useTicketStore()
 const route = useRoute()
 const router = useRouter()
 
+// Poll the unread-ticket count on a fixed interval instead of re-fetching on
+// every navigation (router.afterEach), which fired a request per route change.
+const unreadTimer = ref<number | null>(null)
+
 onMounted(() => {
   app.loadSiteName()
   ticket.refresh()
+  unreadTimer.value = window.setInterval(() => ticket.refresh(), 60_000)
 })
 
-// Keep the Tickets unread dot fresh across navigation without a full reload.
-router.afterEach(() => {
-  ticket.refresh()
+onBeforeUnmount(() => {
+  if (unreadTimer.value !== null) {
+    clearInterval(unreadTimer.value)
+    unreadTimer.value = null
+  }
 })
 
 function onLogout() {

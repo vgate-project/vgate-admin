@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { apiEmail } from '@/api/email'
-import { apiUsers } from '@/api/users'
-import type { User, EmailRecipients, SendEmailRequest } from '@/types/api'
+import { useReferenceStore } from '@/stores/reference'
+import type { EmailRecipients, SendEmailRequest } from '@/types/api'
 
 const sending = ref(false)
 const result = ref<{ message: string; sent: number; total: number; error?: string } | null>(null)
@@ -14,7 +14,13 @@ const recipientsOptions: { label: string; value: EmailRecipients }[] = [
   { label: 'Select users by ID', value: 'ids' },
 ]
 
-const userOptions = ref<{ label: string; value: string }[]>([])
+const reference = useReferenceStore()
+const userOptions = computed<{ label: string; value: string }[]>(() =>
+  reference.users.map((u) => ({
+    label: `${u.email}${u.username ? ` (${u.username})` : ''}`,
+    value: u.id,
+  })),
+)
 
 const form = reactive<SendEmailRequest>({
   recipients: 'all',
@@ -25,18 +31,9 @@ const form = reactive<SendEmailRequest>({
   pinned: false,
 })
 
-async function loadUsers() {
-  try {
-    const { data } = await apiUsers.list(1, 200)
-    userOptions.value = data.items.map((u: User) => ({
-      label: `${u.email}${u.username ? ` (${u.username})` : ''}`,
-      value: u.id,
-    }))
-  } catch {
-    userOptions.value = []
-  }
-}
-onMounted(loadUsers)
+onMounted(() => {
+  void reference.get()
+})
 
 function onRecipientsChange() {
   if (form.recipients !== 'ids') {

@@ -1,15 +1,14 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { apiTraffic } from '@/api/traffic'
-import { apiUsers } from '@/api/users'
-import { apiNodes } from '@/api/nodes'
-import type { User, Node } from '@/types/api'
+import { useReferenceStore } from '@/stores/reference'
 import type { TrafficRow } from '@/types/wire'
 import { formatBytes } from '@/utils/format'
 
+const reference = useReferenceStore()
 const rows = ref<TrafficRow[]>([])
-const users = ref<User[]>([])
-const nodes = ref<Node[]>([])
+const users = computed(() => reference.users)
+const nodes = computed(() => reference.nodes)
 const loading = ref(false)
 const filterUserId = ref<string>('')
 const filterNodeId = ref<string>('')
@@ -18,9 +17,7 @@ const pageSize = ref(20)
 const total = ref(0)
 
 onMounted(async () => {
-  const [usersRes, nodesRes] = await Promise.all([apiUsers.list(1, 1000), apiNodes.list(1, 1000)])
-  users.value = usersRes.data.items
-  nodes.value = nodesRes.data.items
+  await reference.get()
   await loadTraffic()
 })
 

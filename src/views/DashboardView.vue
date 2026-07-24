@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, defineComponent, h } from 'vue'
 import { apiStats } from '@/api/stats'
-import { apiNodes } from '@/api/nodes'
+import { useReferenceStore } from '@/stores/reference'
 import { formatBytes, formatPrice, formatRelative } from '@/utils/format'
-import type { HourlyStat, Node } from '@/types/api'
+import type { HourlyStat } from '@/types/api'
 import router from "@/router";
 import TrafficBarChart from '@/components/TrafficBarChart.vue'
 
+const reference = useReferenceStore()
 const nodeCount = ref(0)
 const onlineCount = ref(0)
 const userCount = ref(0)
@@ -14,8 +15,9 @@ const onlineUsers24h = ref(0)
 const up24h = ref(0)
 const down24h = ref(0)
 const series = ref<HourlyStat[]>([])
-const nodes = ref<Node[]>([])
-const nodeTotal = ref(0)
+// Node Status table reads the shared reference store (cached app-wide) instead
+// of a second dedicated node-list request on every dashboard load.
+const nodes = computed(() => reference.nodes)
 const orderCount24h = ref(0)
 const orderAmount24h = ref(0)
 const loading = ref(true)
@@ -94,9 +96,7 @@ onMounted(async () => {
     onlineUsers24hPrev.value = data.online_users_24h_prev
     orderCount24hPrev.value = data.order_count_24h_prev
     try {
-      const nl = await apiNodes.list(1, 100)
-      nodes.value = nl.data.items
-      nodeTotal.value = nl.data.total
+      await reference.get()
     } catch (e) {
       console.error('failed to load node status', e)
     }
@@ -208,7 +208,7 @@ onMounted(async () => {
         <el-card shadow="never" class="node-card">
           <div class="chart-header">
             <span class="chart-title">Node Status</span>
-            <span class="node-count">{{ nodes.length }} / {{ nodeTotal }}</span>
+            <span class="node-count">{{ nodes.length }}</span>
           </div>
           <el-table :data="nodes" size="small" empty-text="No nodes" max-height="220">
             <el-table-column label="Name" min-width="160">

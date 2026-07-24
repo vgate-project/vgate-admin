@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import {onMounted, ref} from 'vue'
+import {computed, onMounted, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {apiOrders} from '@/api/orders'
-import {apiPlans} from '@/api/plans'
-import {apiTrafficPackages} from '@/api/traffic'
-import type {Order, OrderStatus} from '@/types/api'
+import {useReferenceStore} from '@/stores/reference'
+import type {Order, OrderStatus, Plan, TrafficPackage} from '@/types/api'
 import {formatDateTime, formatPrice} from '@/utils/format'
 import AdminCreateOrderDialog from './AdminCreateOrderDialog.vue'
 import PaymentDialog from '@/components/PaymentDialog.vue'
@@ -21,8 +20,19 @@ const statusFilter = ref<'' | OrderStatus>('')
 const sortBy = ref('')
 const sortOrder = ref<'asc' | 'desc'>('desc')
 
-const planMap = ref<Record<string, string>>({})
-const packageMap = ref<Record<string, string>>({})
+const reference = useReferenceStore()
+const plans = computed<Plan[]>(() => reference.plans)
+const packages = computed<TrafficPackage[]>(() => reference.trafficPackages)
+const planMap = computed<Record<string, string>>(() => {
+  const m: Record<string, string> = {}
+  for (const p of plans.value) m[p.id] = p.name
+  return m
+})
+const packageMap = computed<Record<string, string>>(() => {
+  const m: Record<string, string> = {}
+  for (const p of packages.value) m[p.id] = p.name
+  return m
+})
 
 const createVisible = ref(false)
 
@@ -35,28 +45,6 @@ const payVisible = ref(false)
 const payUrl = ref('')
 const payMode = ref<'redirect' | 'qr'>('redirect')
 const payPlatform = ref('')
-
-async function loadPlans() {
-  try {
-    const {data} = await apiPlans.list()
-    const m: Record<string, string> = {}
-    for (const p of data) m[p.id] = p.name
-    planMap.value = m
-  } catch {
-    /* non-fatal: plan names just won't resolve */
-  }
-}
-
-async function loadPackages() {
-  try {
-    const {data} = await apiTrafficPackages.list()
-    const m: Record<string, string> = {}
-    for (const p of data) m[p.id] = p.name
-    packageMap.value = m
-  } catch {
-    /* non-fatal: package names just won't resolve */
-  }
-}
 
 function productName(row: Order): string {
   if (row.kind === 'plan') return planMap.value[row.plan_id!] ?? row.plan_id
@@ -80,8 +68,7 @@ async function load() {
 }
 
 onMounted(() => {
-  loadPlans()
-  loadPackages()
+  void reference.get()
   load()
 })
 

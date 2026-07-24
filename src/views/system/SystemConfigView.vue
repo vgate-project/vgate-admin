@@ -418,6 +418,7 @@ const alipayCat: CategoryDef = {
   label: 'Alipay',
   hint: 'Alipay credentials and callback URLs; leave empty if unused.',
   fields: [
+    { key: 'payment.alipay.enabled', label: 'Enable Alipay', desc: 'Master switch for this channel, independent of credential configuration.', type: 'switch' },
     { key: 'alipay.app_id', label: 'App ID', type: 'text' },
     { key: 'alipay.private_key', label: 'App Private Key', type: 'textarea' },
     { key: 'alipay.public_key', label: 'Alipay Public Key', type: 'textarea' },
@@ -431,6 +432,7 @@ const wechatCat: CategoryDef = {
   label: 'WeChat Pay',
   hint: 'WeChat Pay v3 (NATIVE) credentials; leave empty if unused.',
   fields: [
+    { key: 'payment.wechat.enabled', label: 'Enable WeChat Pay', desc: 'Master switch for this channel, independent of credential configuration.', type: 'switch' },
     { key: 'wechat.app_id', label: 'App ID', type: 'text' },
     { key: 'wechat.mch_id', label: 'Merchant ID (mchid)', type: 'text' },
     { key: 'wechat.api_v3_key', label: 'APIv3 Key', type: 'text' },
@@ -445,11 +447,44 @@ const stripeCat: CategoryDef = {
   label: 'Stripe',
   hint: 'Stripe Checkout credentials; leave empty if unused.',
   fields: [
+    { key: 'payment.stripe.enabled', label: 'Enable Stripe', desc: 'Master switch for this channel, independent of credential configuration.', type: 'switch' },
     { key: 'stripe.secret_key', label: 'Secret Key', type: 'text' },
     { key: 'stripe.webhook_secret', label: 'Webhook Signing Secret', type: 'text' },
     { key: 'stripe.success_url', label: 'Success Redirect URL', desc: 'Front-end URL Stripe redirects the user to after a successful checkout (e.g. https://your-user-portal.com/payment/success). You may append {CHECKOUT_SESSION_ID} to read the session id.', type: 'text' },
     { key: 'stripe.cancel_url', label: 'Cancel Redirect URL', desc: 'Front-end URL Stripe redirects the user to if they cancel checkout (e.g. https://your-user-portal.com/payment/cancel). Entitlement is still granted only via the webhook at /api/v1/billing/stripe/notify.', type: 'text' },
     { key: 'stripe.currency', label: 'Currency', desc: 'ISO currency, e.g. cny; defaults to cny when empty.', type: 'text' },
+  ],
+}
+
+const paypalCat: CategoryDef = {
+  key: 'paypal',
+  label: 'PayPal',
+  hint: 'PayPal Checkout (Orders v2, CAPTURE) credentials; leave empty if unused.',
+  fields: [
+    { key: 'payment.paypal.enabled', label: 'Enable PayPal', desc: 'Master switch for this channel, independent of credential configuration.', type: 'switch' },
+    { key: 'paypal.client_id', label: 'Client ID', type: 'text' },
+    { key: 'paypal.secret', label: 'Secret', type: 'text' },
+    { key: 'paypal.notify_url', label: 'Notify URL', desc: 'Async payment-result webhook. PayPal POSTs the signed event here, so it must be a publicly reachable HTTPS URL — e.g. https://your-manager-domain.com/api/v1/billing/paypal/notify.', type: 'text' },
+    { key: 'paypal.webhook_id', label: 'Webhook ID', desc: 'The webhook id PayPal assigned when you registered the webhook (required to verify signatures).', type: 'text' },
+    { key: 'paypal.success_url', label: 'Success Redirect URL', desc: 'Front-end URL PayPal redirects the user to after approval (e.g. https://your-user-portal.com/payment/success).', type: 'text' },
+    { key: 'paypal.cancel_url', label: 'Cancel Redirect URL', desc: 'Front-end URL PayPal redirects the user to if they cancel (e.g. https://your-user-portal.com/payment/cancel).', type: 'text' },
+    { key: 'paypal.sandbox', label: 'Sandbox Mode', desc: 'Use PayPal sandbox environment when enabled', type: 'switch' },
+    { key: 'paypal.currency', label: 'Currency', desc: 'ISO currency, e.g. usd; defaults to usd when empty.', type: 'text' },
+  ],
+}
+
+const appleCat: CategoryDef = {
+  key: 'apple',
+  label: 'Apple (App Store IAP)',
+  hint: 'Apple App Store In-App Purchase (App Store Server API v2) credentials. Purchases are completed inside the native iOS app, which posts the signed transaction to the backend for verification.',
+  fields: [
+    { key: 'payment.apple.enabled', label: 'Enable Apple', desc: 'Master switch for this channel, independent of credential configuration.', type: 'switch' },
+    { key: 'apple.issuer_id', label: 'Issuer ID', type: 'text' },
+    { key: 'apple.key_id', label: 'Key ID', type: 'text' },
+    { key: 'apple.bundle_id', label: 'Bundle ID', type: 'text' },
+    { key: 'apple.private_key', label: 'Auth Key (.p8)', desc: 'Contents of the downloaded .p8 auth key file.', type: 'textarea' },
+    { key: 'apple.environment', label: 'Environment', desc: 'sandbox or prod; defaults to sandbox when empty.', type: 'text' },
+    { key: 'apple.product_map', label: 'Product Map (JSON)', desc: 'Maps an Apple product id to a vgate plan_price id, e.g. {"com.example.pro.monthly":"<plan_price_id>"}.', type: 'textarea' },
   ],
 }
 
@@ -470,9 +505,9 @@ const paymentGeneralCat: CategoryDef = {
 const paymentCat: CategoryDef = {
   key: 'payment',
   label: 'Payment',
-  hint: 'Payment provider configuration (Alipay / WeChat Pay / Stripe).',
+  hint: 'Payment provider configuration (Alipay / WeChat Pay / Stripe / PayPal / Apple). Enable a channel with its switch; only enabled + fully configured channels are offered to users.',
   fields: [], // parent has no direct fields
-  children: [paymentGeneralCat, alipayCat, wechatCat, stripeCat], // become sub-tabs
+  children: [paymentGeneralCat, alipayCat, wechatCat, stripeCat, paypalCat, appleCat], // become sub-tabs
 }
 
 const subscriptionCat: CategoryDef = {

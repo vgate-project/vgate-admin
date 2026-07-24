@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { apiRedemption } from '@/api/redemption'
-import { apiPlans } from '@/api/plans'
+import { useReferenceStore } from '@/stores/reference'
 import type { RedemptionCode, GenerateRedemptionRequest, RedeemType, Plan } from '@/types/api'
 import { formatDateTime, formatBytes } from '@/utils/format'
 import CopyableTokenDialog from '@/components/CopyableTokenDialog.vue'
@@ -16,7 +16,8 @@ const total = ref(0)
 
 const editorVisible = ref(false)
 const saving = ref(false)
-const plans = ref<Plan[]>([])
+const reference = useReferenceStore()
+const plans = computed<Plan[]>(() => reference.plans)
 
 // Local form shape: unlike GenerateRedemptionRequest, the numerics are
 // required so v-model bindings (e.g. QuotaInput) stay type-safe.
@@ -79,17 +80,8 @@ async function load() {
   }
 }
 
-async function loadPlans() {
-  if (plans.value.length > 0) return
-  try {
-    const { data } = await apiPlans.list()
-    plans.value = data
-  } catch {
-    /* error toasted by interceptor */
-  }
-}
-onMounted(() => {
-  loadPlans()
+onMounted(async () => {
+  await reference.get()
   load()
 })
 
@@ -113,8 +105,8 @@ async function openCreate() {
     expires_at: null,
     note: '',
   }
-  // Plan codes need a plan picker; ensure plans are loaded.
-  await loadPlans()
+  // Plans come from the shared reference store; ensure it's loaded.
+  await reference.get()
   editorVisible.value = true
 }
 

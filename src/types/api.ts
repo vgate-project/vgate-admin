@@ -359,10 +359,23 @@ export interface AdminCreateOrderRequest {
 
 export interface CreateOrderResponse {
   order: Order
-  pay_url: string // QR content (alipay trade.precreate / wechat code_url) or redirect URL (stripe)
-  // How to present pay_url to the user: "redirect" (open in browser) or
-  // "qr" (render pay_url as a QR code to scan, e.g. wechat NATIVE).
-  pay_mode?: 'redirect' | 'qr'
+  pay_url: string // QR content (alipay trade.precreate / wechat code_url) or redirect URL (stripe / paypal)
+  // How to present pay_url to the user: "redirect" (open in browser),
+  // "qr" (render pay_url as a QR code to scan, e.g. wechat NATIVE), or
+  // "iap" (an in-app purchase completed inside a native app, e.g. Apple).
+  pay_mode?: PaymentMethodMode
+}
+
+// Payment channel mode returned by the payment-methods endpoints.
+export type PaymentMethodMode = 'redirect' | 'qr' | 'iap'
+
+// A payment channel surfaced for the admin order-creation picker.
+export interface PaymentMethodInfo {
+  platform: string
+  label: string
+  mode: PaymentMethodMode
+  enabled: boolean
+  configured: boolean
 }
 
 // --- Tickets (support work-orders) ---
@@ -403,4 +416,15 @@ export interface TicketCreateRequest {
 
 export interface TicketStatusRequest {
   status: TicketStatus
+}
+
+// AdminReference is the single payload returned by GET /admin/reference,
+// bundling the static lookup lists reused across many admin views and dialogs
+// (users, nodes, plans, traffic packages, payment methods).
+export interface AdminReference {
+  users: Page<User>
+  nodes: Page<Node>
+  plans: Plan[]
+  traffic_packages: TrafficPackage[]
+  payment_methods: PaymentMethodInfo[]
 }

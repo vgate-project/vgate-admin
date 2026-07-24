@@ -6,11 +6,11 @@ import type { TrafficPackage, TrafficPackageRequest } from '@/types/api'
 import { formatBytes, formatPrice } from '@/utils/format'
 import QuotaInput from '@/components/QuotaInput.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useReferenceStore } from '@/stores/reference'
 
 const auth = useAuthStore()
+const reference = useReferenceStore()
 
-const packages = ref<TrafficPackage[]>([])
-const loading = ref(false)
 const editorVisible = ref(false)
 const editing = ref<TrafficPackage | null>(null)
 const saving = ref(false)
@@ -25,16 +25,9 @@ const form = ref<TrafficPackageRequest>({
   enabled: true,
 })
 
-async function load() {
-  loading.value = true
-  try {
-    const { data } = await apiTrafficPackages.list()
-    packages.value = data
-  } finally {
-    loading.value = false
-  }
-}
-onMounted(load)
+onMounted(() => {
+  void reference.get()
+})
 
 function openCreate() {
   editing.value = null
@@ -69,7 +62,7 @@ async function onSave() {
     }
     ElMessage.success(editing.value ? 'Updated' : 'Created')
     editorVisible.value = false
-    load()
+    await reference.refresh()
   } finally {
     saving.value = false
   }
@@ -83,7 +76,7 @@ async function onDelete(pkg: TrafficPackage) {
   }
   await apiTrafficPackages.remove(pkg.id)
   ElMessage.success('Deleted')
-  load()
+  await reference.refresh()
 }
 </script>
 
@@ -97,7 +90,7 @@ async function onDelete(pkg: TrafficPackage) {
     </div>
 
     <el-card shadow="never">
-      <el-table :data="packages" v-loading="loading" empty-text="No traffic packages yet">
+      <el-table :data="reference.trafficPackages" v-loading="reference.loading" empty-text="No traffic packages yet">
         <el-table-column prop="name" label="Name" min-width="160" />
         <el-table-column label="Price" width="120">
           <template #default="{ row }">{{ formatPrice(row.price) }}</template>

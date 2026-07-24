@@ -2,19 +2,23 @@
 import { ref, reactive, watch, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { apiOrders } from '@/api/orders'
-import { apiPlans } from '@/api/plans'
-import { apiUsers } from '@/api/users'
-import { apiTrafficPackages } from '@/api/traffic'
-import type { Plan, User, TrafficPackage, AdminCreateOrderRequest } from '@/types/api'
+import { useReferenceStore } from '@/stores/reference'
+import type { Plan, User, TrafficPackage, AdminCreateOrderRequest, PaymentMethodInfo } from '@/types/api'
 import { formatPrice, formatBytes } from '@/utils/format'
 
 const props = defineProps<{ modelValue: boolean }>()
 const emit = defineEmits<{ 'update:modelValue': [boolean]; created: [string, string?, string?] }>()
 
+const reference = useReferenceStore()
+
+// The lookup lists come from the shared reference store (one app-wide fetch),
+// not four separate requests every time this dialog opens.
+const users = computed<User[]>(() => reference.users)
+const plans = computed<Plan[]>(() => reference.plans)
+const trafficPackages = computed<TrafficPackage[]>(() => reference.trafficPackages)
+const paymentMethods = computed<PaymentMethodInfo[]>(() => reference.paymentMethods)
+
 const saving = ref(false)
-const users = ref<User[]>([])
-const plans = ref<Plan[]>([])
-const trafficPackages = ref<TrafficPackage[]>([])
 
 type OrderKind = 'plan' | 'traffic' | 'reset'
 const form = reactive({
@@ -54,18 +58,15 @@ const resetPlans = computed(() =>
   plans.value.filter((p) => p.enabled && p.reset_enabled),
 )
 
-// Lazily load users + plans + traffic packages the first time the dialog opens.
+// Load the shared reference lists (once) when the dialog opens.
 async function ensureData() {
-  if (users.value.length && plans.value.length && trafficPackages.value.length) return
   try {
-    const [u, p, t] = await Promise.all([
-      apiUsers.list(1, 200),
-      apiPlans.list(),
-      apiTrafficPackages.list(),
-    ])
-    users.value = u.data.items
-    plans.value = p.data
-    trafficPackages.value = t.data
+    await reference.get()
+    // Default to the first enabled + configured channel (fall back to alipay).
+    const first = reference.paymentMethods.find((x) => x.enabled && x.configured)
+    if (!form.platform || form.platform === 'alipay') {
+      form.platform = first?.platform ?? 'alipay'
+    }
   } catch {
     /* error surfaced via ElMessage in submit */
   }
@@ -227,9 +228,13 @@ function userLabel(u: User): string {
 
       <el-form-item label="Platform">
         <el-select v-model="form.platform" style="width: 100%">
-          <el-option label="Alipay" value="alipay" />
-          <el-option label="WeChat Pay" value="wechat" />
-          <el-option label="Stripe" value="stripe" />
+          <el-option
+            v-for="m in paymentMethods.filter((x) => x.enabled && x.configured)"
+            :key="m.platform"
+            :label="m.label"
+            :value="m.platform"
+          />
+          <el-option v-if="paymentMethods.filter((x) => x.enabled && x.configured).length === 0" label="Alipay" value="alipay" />
         </el-select>
       </el-form-item>
 

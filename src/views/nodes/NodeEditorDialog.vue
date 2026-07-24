@@ -2,6 +2,7 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { apiNodes } from '@/api/nodes'
+import { useReferenceStore } from '@/stores/reference'
 import type { Node, NodeRequest, Network, Security, Flow } from '@/types/api'
 import type { TLSConfig, RealityConfig, VLESS } from '@/types/wire'
 import TagListInput from '@/components/TagListInput.vue'
@@ -56,18 +57,12 @@ const form = reactive({
   enabled: true,
 })
 
-const parentNodes = ref<Node[]>([])
+const reference = useReferenceStore()
 
-// Load real (parent-eligible) nodes for the parent dropdown. Virtual nodes are
-// excluded so a child can never point at another child.
-async function loadParents() {
-  try {
-    const { data } = await apiNodes.list(1, 1000)
-    parentNodes.value = (data.items || []).filter((n) => !n.parent_id)
-  } catch {
-    parentNodes.value = []
-  }
-}
+// Real (parent-eligible) nodes for the parent dropdown, read from the shared
+// reference store instead of re-fetching the node list on every dialog open.
+// Virtual nodes are excluded so a child can never point at another child.
+const parentNodes = computed<Node[]>(() => reference.nodes.filter((n) => !n.parent_id))
 
 const v2Enabled = computed(() => !!form.vless.decryption && form.vless.decryption !== 'none')
 
@@ -113,7 +108,7 @@ function prefillFromNode(node: Node) {
     form.address = node.address
     form.port = node.port // 0 = inherit parent port
     form.enabled = node.enabled
-    loadParents()
+    void reference.get()
     return
   }
   form.isVirtual = false
@@ -147,29 +142,21 @@ function prefillFromNode(node: Node) {
 watch(
   () => props.modelValue,
   (v) => {
-    if (v) {
-      resetForm()
-      activeTab.value = 'basics'
-      if (props.node) {
-        prefillFromNode(props.node)
-      } else if (props.defaultParentId) {
-        // Opening from a real node's "Add child" action → virtual mode preset.
-        form.isVirtual = true
-        form.parentId = props.defaultParentId
-        form.port = 0 // default: inherit parent port
-        loadParents()
-      } else {
-        loadParents()
-      }
+    if (!v) return
+    resetForm()
+    activeTab.value = 'basics'
+    // Parent list comes from the shared reference store (cached app-wide);
+    // load it once if not already present. The computed parentNodes reacts
+    // once the data arrives.
+    void reference.get()
+    if (props.node) {
+      prefillFromNode(props.node)
+    } else if (props.defaultParentId) {
+      // Opening from a real node's "Add child" action → virtual mode preset.
+      form.isVirtual = true
+      form.parentId = props.defaultParentId
+      form.port = 0 // default: inherit parent port
     }
-  },
-)
-
-// Lazily load the parent list the first time virtual mode is selected.
-watch(
-  () => form.isVirtual,
-  (v) => {
-    if (v && parentNodes.value.length === 0) loadParents()
   },
 )
 

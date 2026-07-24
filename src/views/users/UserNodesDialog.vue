@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { apiUsers } from '@/api/users'
-import { apiNodes } from '@/api/nodes'
+import { useReferenceStore } from '@/stores/reference'
 import type { Node } from '@/types/api'
 
 const props = defineProps<{ modelValue: boolean; userId: string | null }>()
 const emit = defineEmits<{ 'update:modelValue': [boolean]; saved: [] }>()
 
-const allNodes = ref<Node[]>([])
+const reference = useReferenceStore()
+const allNodes = computed<Node[]>(() => reference.nodes)
 const selectedIds = ref<string[]>([])
 const userLevel = ref(0)
 const loading = ref(false)
@@ -27,13 +28,13 @@ watch(() => props.modelValue, async (v) => {
   if (!v || !props.userId) return
   loading.value = true
   try {
-    const [userRes, nodesRes, userNodesRes] = await Promise.all([
+    const [userRes, userNodesRes] = await Promise.all([
       apiUsers.get(props.userId),
-      apiNodes.list(1, 1000),
       apiUsers.nodes(props.userId),
     ])
+    // Node list comes from the shared reference store (cached app-wide).
+    await reference.get()
     userLevel.value = userRes.data.level
-    allNodes.value = nodesRes.data.items
     // Only above-level nodes are managed here; within-level ones are auto-granted.
     selectedIds.value = userNodesRes.data
       .filter((n) => n.level > userLevel.value)
