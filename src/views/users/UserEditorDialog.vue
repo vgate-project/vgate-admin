@@ -2,8 +2,7 @@
 import { ref, reactive, watch, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { apiUsers } from '@/api/users'
-import type { User, UserRequest } from '@/types/api'
-import { formatDateTime } from '@/utils/format'
+import type { User, UserRequest, TrafficGrantView } from '@/types/api'
 import { formatBytes } from '@/utils/format'
 import QuotaInput from '@/components/QuotaInput.vue'
 
@@ -101,6 +100,21 @@ async function onSubmit() {
     saving.value = false
   }
 }
+
+// Read-only view of the user's active traffic grants (packages / redemption
+// codes) with per-grant remaining traffic.
+const trafficGrants = computed(() => (props.user?.traffic_grants ?? []) as TrafficGrantView[])
+function grantRemaining(g: TrafficGrantView): number {
+  return Math.max(0, g.quota_bytes - (g.used_bytes ?? 0))
+}
+function grantPct(g: TrafficGrantView): number {
+  if (!g.quota_bytes) return 0
+  const used = Math.min(g.used_bytes ?? 0, g.quota_bytes)
+  return Math.min(100, Math.round((used / g.quota_bytes) * 100))
+}
+function grantSourceLabel(s: string): string {
+  return s === 'traffic_package' ? 'Package' : 'Redemption'
+}
 </script>
 
 <template>
@@ -134,7 +148,10 @@ async function onSubmit() {
         <el-checkbox v-model="form.unlimited" class="quota-unlimited">Unlimited</el-checkbox>
         <QuotaInput v-model="form.quota_bytes" :disabled="form.unlimited" />
         <span class="hint">
-          {{ form.unlimited ? 'No traffic cap.' : '0 = no quota (blocked). Used: ' + formatBytes(form.quota_bytes) }}
+          {{ form.unlimited ? 'No traffic cap.' : form.quota_bytes === 0 && !props.user?.traffic_quota_bytes ? '0 = no quota (blocked).' : 'Base: ' + formatBytes(form.quota_bytes) }}
+          <template v-if="props.user?.traffic_quota_bytes">
+            + {{ formatBytes(props.user.traffic_quota_bytes) }} bonus → total {{ form.unlimited ? 'Unlimited' : formatBytes((form.quota_bytes || 0) + props.user.traffic_quota_bytes) }}
+          </template>
         </span>
       </el-form-item>
       <el-form-item label="Monthly reset">
@@ -157,6 +174,28 @@ async function onSubmit() {
         <span class="hint">Max successful registrations this user may sponsor (overrides the default). Empty = use system default.</span>
       </el-form-item>
     </el-form>
+    <el-card v-if="isEdit && trafficGrants.length" shadow="never" class="packages-card">
+      <template #header>Traffic packages</template>
+      <el-table :data="trafficGrants" size="small" style="width: 100%">
+        <el-table-column label="Name" min-width="140">
+          <template #default="{ row }">{{ row.name || grantSourceLabel(row.source) }}</template>
+        </el-table-column>
+        <el-table-column label="Source" width="100">
+          <template #default="{ row }">{{ grantSourceLabel(row.source) }}</template>
+        </el-table-column>
+        <el-table-column label="Remaining / Total" min-width="180">
+          <template #default="{ row }">{{ formatBytes(grantRemaining(row as TrafficGrantView)) }} / {{ formatBytes(row.quota_bytes) }}</template>
+        </el-table-column>
+        <el-table-column label="Usage" min-width="160">
+          <template #default="{ row }">
+            <el-progress :percentage="grantPct(row as TrafficGrantView)" :show-text="false" />
+          </template>
+        </el-table-column>
+        <el-table-column label="Expiry" width="160">
+          <template #default="{ row }">Permanent</template>
+        </el-table-column>
+      </el-table>
+    </el-card>
     <template #footer>
       <el-button @click="emit('update:modelValue', false)">Cancel</el-button>
       <el-button type="primary" :loading="saving" @click="onSubmit">
@@ -175,5 +214,8 @@ async function onSubmit() {
 }
 .quota-unlimited {
   margin-right: 8px;
+}
+.packages-card {
+  margin-top: 12px;
 }
 </style>

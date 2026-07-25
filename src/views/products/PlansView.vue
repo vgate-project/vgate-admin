@@ -85,12 +85,6 @@ async function onSaved() {
         <el-table-column label="Quota" width="120">
           <template #default="{ row }">{{ formatBytes(row.quota_bytes) }}</template>
         </el-table-column>
-        <el-table-column label="Reset" width="110">
-          <template #default="{ row }">
-            <span v-if="row.reset_enabled">{{ formatPrice(row.reset_price) }}</span>
-            <span v-else class="muted">—</span>
-          </template>
-        </el-table-column>
         <el-table-column label="Speed limit" min-width="160">
           <template #default="{ row }">
             <span v-if="row.speed_limit_up_bps || row.speed_limit_down_bps">

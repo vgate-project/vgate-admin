@@ -110,18 +110,30 @@ export interface User {
   level: number
   expire_at?: string
   quota_bytes: number
+  traffic_quota_bytes?: number // active traffic-package / redemption bonus (added on top of base)
+  package_used_bytes?: number // traffic already charged to packages / redemption grants (survives base resets)
+  traffic_grants?: TrafficGrantView[] // active grants with per-grant remaining
   quota_reset_enabled: boolean
   speed_limit_up_bps?: number
   speed_limit_down_bps?: number
   up_total: number
   down_total: number
-  last_reset_at?: string
   sub_token: string
   enabled: boolean
   email_verified?: boolean
   max_invites?: number
   created_at: string
   updated_at: string
+}
+
+// TrafficGrantView mirrors model.TrafficGrant for the user-detail response.
+export interface TrafficGrantView {
+  id: string
+  source: 'traffic_package' | 'redemption'
+  source_id?: string
+  name?: string
+  quota_bytes: number
+  used_bytes: number
 }
 
 export interface UserWithSubToken extends User {
@@ -168,7 +180,7 @@ export interface InviteRequest {
 }
 
 // --- Redemption codes ---
-export type RedeemType = 'traffic' | 'duration' | 'plan' | 'reset'
+export type RedeemType = 'traffic' | 'duration' | 'plan'
 
 export interface RedemptionCode {
   id: string
@@ -246,8 +258,6 @@ export interface Admin {
 
 // --- Plans (purchasable products) ---
 export interface PlanPrice {
-  id?: string
-  plan_id?: string
   period: string // month | quarter | half_year | year
   price: number // cents
   duration_days?: number
@@ -269,9 +279,6 @@ export interface Plan {
   // Per-user speed cap delivered by this plan (bytes/sec, 0 = unlimited).
   speed_limit_up_bps?: number
   speed_limit_down_bps?: number
-  // Optional plan-scoped traffic reset package.
-  reset_enabled?: boolean
-  reset_price?: number // cents
   prices?: PlanPrice[]
   created_at: string
   updated_at: string
@@ -286,8 +293,6 @@ export interface PlanRequest {
   enabled?: boolean
   speed_limit_up_bps?: number
   speed_limit_down_bps?: number
-  reset_enabled?: boolean
-  reset_price?: number // cents
   allow_renew_off_shelf?: boolean
   prices: PlanPrice[]
 }
@@ -299,7 +304,6 @@ export interface TrafficPackage {
   display_name?: string // optional gateway product name; empty ⇒ template/default
   price: number // cents
   quota_bytes: number
-  validity_days: number // 0 = no expiry extension
   description: string
   enabled: boolean
   created_at: string
@@ -311,7 +315,6 @@ export interface TrafficPackageRequest {
   display_name?: string
   price: number // cents
   quota_bytes: number
-  validity_days?: number
   description?: string
   enabled?: boolean
 }
@@ -328,7 +331,6 @@ export interface Order {
   period?: string
   duration_days: number
   traffic_package_id?: string // omitted (omitempty) for non-traffic orders
-  validity_days: number
   amount: number // cents
   status: OrderStatus
   platform?: string // payment gateway: alipay | manual | (future)

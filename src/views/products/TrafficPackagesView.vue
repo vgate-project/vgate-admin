@@ -20,7 +20,6 @@ const form = ref<TrafficPackageRequest>({
   display_name: '',
   price: 0,
   quota_bytes: 0,
-  validity_days: 0,
   description: '',
   enabled: true,
 })
@@ -31,7 +30,7 @@ onMounted(() => {
 
 function openCreate() {
   editing.value = null
-  form.value = { name: '', display_name: '', price: 0, quota_bytes: 0, validity_days: 0, description: '', enabled: true }
+  form.value = { name: '', display_name: '', price: 0, quota_bytes: 0, description: '', enabled: true }
   editorVisible.value = true
 }
 function openEdit(pkg: TrafficPackage) {
@@ -41,7 +40,6 @@ function openEdit(pkg: TrafficPackage) {
     display_name: pkg.display_name || '',
     price: pkg.price,
     quota_bytes: pkg.quota_bytes,
-    validity_days: pkg.validity_days,
     description: pkg.description,
     enabled: pkg.enabled,
   }
@@ -99,7 +97,7 @@ async function onDelete(pkg: TrafficPackage) {
           <template #default="{ row }">{{ formatBytes(row.quota_bytes) }}</template>
         </el-table-column>
         <el-table-column label="Validity" width="120">
-          <template #default="{ row }">{{ row.validity_days > 0 ? row.validity_days + ' days' : 'No expiry' }}</template>
+          <template #default="{ row }">Permanent</template>
         </el-table-column>
         <el-table-column label="Enabled" width="90">
           <template #default="{ row }">
@@ -145,10 +143,6 @@ async function onDelete(pkg: TrafficPackage) {
         <el-form-item label="Traffic">
           <QuotaInput v-model="form.quota_bytes" />
           <span class="hint">{{ formatBytes(form.quota_bytes) }}</span>
-        </el-form-item>
-        <el-form-item label="Validity (days)">
-          <el-input-number v-model="form.validity_days" :min="0" />
-          <span class="hint">0 = no expiry</span>
         </el-form-item>
         <el-form-item label="Description">
           <el-input v-model="form.description" type="textarea" :rows="2" placeholder="(optional)" />

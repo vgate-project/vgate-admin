@@ -20,7 +20,7 @@ const paymentMethods = computed<PaymentMethodInfo[]>(() => reference.paymentMeth
 
 const saving = ref(false)
 
-type OrderKind = 'plan' | 'traffic' | 'reset'
+type OrderKind = 'plan' | 'traffic'
 const form = reactive({
   user_id: '' as string,
   kind: 'plan' as OrderKind,
@@ -46,16 +46,11 @@ const planOptions = computed(() =>
       (p.prices ?? [])
         .filter((pr) => pr.enabled !== false)
         .map((pr) => ({
-          value: pr.id ?? '',
+          value: pr.period,
           plan_id: p.id,
           label: `${p.name} — ${PERIOD_LABELS[pr.period] ?? pr.period} — ${formatPrice(pr.price)}`,
         })),
     ),
-)
-
-// Plans that actually expose a traffic-reset package, for reset orders.
-const resetPlans = computed(() =>
-  plans.value.filter((p) => p.enabled && p.reset_enabled),
 )
 
 // Load the shared reference lists (once) when the dialog opens.
@@ -116,7 +111,7 @@ async function onSubmit() {
       plan_price_id: opt.value,
       platform: form.platform,
     }
-  } else if (form.kind === 'traffic') {
+  } else {
     if (!form.traffic_package_id) {
       ElMessage.error('Select a traffic package')
       return
@@ -125,17 +120,6 @@ async function onSubmit() {
       user_id: form.user_id,
       kind: 'traffic',
       traffic_package_id: form.traffic_package_id,
-      platform: form.platform,
-    }
-  } else {
-    if (!form.plan_id) {
-      ElMessage.error('Select a plan to reset')
-      return
-    }
-    body = {
-      user_id: form.user_id,
-      kind: 'reset',
-      plan_id: form.plan_id,
       platform: form.platform,
     }
   }
@@ -179,7 +163,6 @@ function userLabel(u: User): string {
         <el-radio-group v-model="form.kind">
           <el-radio value="plan">Plan</el-radio>
           <el-radio value="traffic">Traffic Pkg</el-radio>
-          <el-radio value="reset">Reset</el-radio>
         </el-radio-group>
       </el-form-item>
 
@@ -206,22 +189,6 @@ function userLabel(u: User): string {
             :key="pkg.id"
             :label="`${pkg.name} — ${formatBytes(pkg.quota_bytes)} — ${formatPrice(pkg.price)}`"
             :value="pkg.id"
-          />
-        </el-select>
-      </el-form-item>
-
-      <el-form-item v-else label="Plan" required>
-        <el-select
-          v-model="form.plan_id"
-          filterable
-          placeholder="Select plan to reset"
-          style="width: 100%"
-        >
-          <el-option
-            v-for="p in resetPlans"
-            :key="p.id"
-            :label="`${p.name} — ${formatPrice(p.reset_price ?? 0)}`"
-            :value="p.id"
           />
         </el-select>
       </el-form-item>

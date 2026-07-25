@@ -51,7 +51,6 @@ const typeLabel: Record<RedeemType, string> = {
   traffic: 'Traffic',
   duration: 'Duration',
   plan: 'Plan',
-  reset: 'Reset',
 }
 
 // Human-readable summary of what a code grants.
@@ -63,8 +62,6 @@ function benefitSummary(c: RedemptionCode): string {
       return `+${(c.duration_days || 0)} days`
     case 'plan':
       return `plan ${c.plan_id || ''}`
-    case 'reset':
-      return 'reset traffic'
   }
   return c.type
 }
@@ -269,7 +266,6 @@ function planName(id?: string | null): string {
             <el-option label="Traffic (add quota)" value="traffic" />
             <el-option label="Duration (extend expiry)" value="duration" />
             <el-option label="Plan (free subscription)" value="plan" />
-            <el-option label="Reset (zero usage)" value="reset" />
           </el-select>
         </el-form-item>
         <el-form-item v-if="form.type === 'traffic'" label="Quota" required>

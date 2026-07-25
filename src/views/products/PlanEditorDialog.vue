@@ -37,8 +37,6 @@ const form = reactive({
   enabled: true,
   speed_limit_up_mbps: 0,
   speed_limit_down_mbps: 0,
-  reset_enabled: false,
-  reset_price: 0,
   allow_renew_off_shelf: false,
   prices: [] as PlanPrice[],
 })
@@ -59,8 +57,6 @@ watch(
     form.enabled = true
     form.speed_limit_up_mbps = 0
     form.speed_limit_down_mbps = 0
-    form.reset_enabled = false
-    form.reset_price = 0
     form.prices = [blankPrice()]
     if (props.plan) {
       form.name = props.plan.name
@@ -71,8 +67,6 @@ watch(
       form.enabled = props.plan.enabled
       form.speed_limit_up_mbps = Math.round((props.plan.speed_limit_up_bps ?? 0) / BPS_PER_MBPS)
       form.speed_limit_down_mbps = Math.round((props.plan.speed_limit_down_bps ?? 0) / BPS_PER_MBPS)
-      form.reset_enabled = props.plan.reset_enabled ?? false
-      form.reset_price = props.plan.reset_price ?? 0
       form.allow_renew_off_shelf = props.plan.allow_renew_off_shelf ?? false
       form.prices = (props.plan.prices && props.plan.prices.length ? props.plan.prices : [blankPrice()]).map(
         (p) => ({ ...p, duration_days: p.duration_days || DEFAULT_DAYS[p.period] || 30 }),
@@ -102,11 +96,8 @@ function buildRequest(): PlanRequest {
     enabled: form.enabled,
     speed_limit_up_bps: Math.round(form.speed_limit_up_mbps * BPS_PER_MBPS),
     speed_limit_down_bps: Math.round(form.speed_limit_down_mbps * BPS_PER_MBPS),
-    reset_enabled: form.reset_enabled,
-    reset_price: form.reset_price,
     allow_renew_off_shelf: form.allow_renew_off_shelf,
     prices: form.prices.map((p, i) => ({
-      id: p.id,
       period: p.period,
       price: p.price,
       duration_days: p.duration_days || DEFAULT_DAYS[p.period] || 30,
@@ -199,16 +190,6 @@ async function onSubmit() {
         <el-button type="danger" link @click="removePrice(idx)">Remove</el-button>
       </div>
       <el-button type="primary" plain @click="addPrice">+ Add billing option</el-button>
-
-      <el-divider>Traffic Reset</el-divider>
-      <el-form-item label="Enabled">
-        <el-switch v-model="form.reset_enabled" />
-        <span class="hint">Let users self-reset used traffic after exhausting the plan quota.</span>
-      </el-form-item>
-      <el-form-item label="Reset price">
-        <el-input-number v-model="form.reset_price" :min="0" :step="100" />
-        <span class="hint">{{ formatPrice(form.reset_price) }}</span>
-      </el-form-item>
 
       <el-divider>Speed Limit</el-divider>
       <el-form-item label="Upload speed limit">
