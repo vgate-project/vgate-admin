@@ -5,8 +5,8 @@ it to manage proxy nodes, users, plans, orders, traffic, announcements, and syst
 config — including per-node, per-plan, and per-user speed limits. It talks to the
 manager's REST API under `/api/v1`.
 
-The **System Config → Payment** page configures the gateways (Alipay, WeChat Pay, Stripe)
-used when operators or users create paid orders.
+The **System Config → Payment** page configures the gateways (**Alipay, WeChat Pay, Stripe,
+PayPal, Apple (App Store IAP)**) used when operators or users create paid orders.
 
 ## Tech stack
 
@@ -17,6 +17,8 @@ used when operators or users create paid orders.
 - [Pinia](https://pinia.vuejs.org/) — state management
 - [Vue Router](https://router.vuejs.org/) — routing
 - [Axios](https://axios-http.com/) — HTTP client
+- [qrcode](https://github.com/soldair/node-qrcode) — payment QR codes
+- [@element-plus/icons-vue](https://element-plus.org/) — icon set
 
 ## Prerequisites
 
@@ -52,28 +54,39 @@ to the backend without CORS issues during local development.
 
 - **Nodes**: create/edit proxy nodes, set their listen port, transport (`tcp`/`ws`/`xhttp`),
   TLS/Reality security, and per-node speed limits — all delivered to the node via the manager.
-- **Users & plans**: create users, assign subscription plans (quotas, expiry, speed caps),
-  revoke credentials, and set per-user speed limits.
+- **Users & products**: create users, assign subscription **plans** (quotas, expiry, speed caps),
+  manage **traffic packages** (one-off traffic add-ons), revoke credentials, and set per-user
+  speed limits.
 - **Orders**: view and manage billing orders.
 - **Traffic**: inspect per-user and per-node usage and stats.
-- **System config**: tune hot-reloadable settings (JWT TTLs, log level/format, CORS origins,
-  timeouts, and Telegram bot toggles) via `PUT /api/v1/admin/system-config`.
-- **Announcements**: publish notices to the user portal.
+- **System config**: tune hot-reloadable settings via `PUT /api/v1/admin/system-config`, including
+  JWT TTLs, log level/format, CORS origins, timeouts, **Captcha / Cloudflare Turnstile**,
+  registration modes (open / invite-gated / email-suffix allowlist), password policy, **trial
+  accounts**, traffic reminders, **subscription base URLs**, the **Telegram** bot toggles, and the
+  **Payment** gateways.
 - **Invites**: create and manage invite codes that gate or credit new registrations.
 - **Redemption codes**: issue and track redemption codes that users apply from the portal (`/redeem`) to claim plans or credit.
-- **Telegram**: link your personal Telegram account from **Settings → Telegram** (to receive
-  ticket alerts), and broadcast a message to every linked user from the **Telegram** view
-  (optionally also published as an announcement).
+- **Messaging**: a single page with three tabs — **Announcements** (publish notices to the user
+  portal), **Email** (broadcast an email to all/active/selected users, optionally also creating an
+  announcement), and **Telegram** (broadcast a message to every linked user). From **Settings →
+  Telegram** you can also link your own operator account to receive ticket alerts.
+- **Email config**: configure the outbound mail backend under **System Config → Email**. The
+  **General** tab holds the provider (`smtp` / `resend`), the enabled switch, the shared **From**
+  address, and an optional **From Name**. Use the **Test Email** button on that tab to send a probe
+  and verify connectivity without broadcasting. (Verified-domain rules for Resend still apply.)
 - **Tickets**: view and reply to user support tickets and move them through a status machine
   (`open → in_progress → resolved → closed`); the ticket drawer closes automatically when you
   mark a ticket closed.
-- **Email**: configure the outbound mail backend under **System Config → Email**. The **General**
-  tab holds the provider (`smtp` / `resend`), the enabled switch, the shared **From** address, and
-  an optional **From Name**. Use the **Test Email** button on that tab to send a probe and verify
-  connectivity without broadcasting. (Verified-domain rules for Resend still apply.)
 - **Admins** (super-admin only): create and manage operator accounts. Change an admin's password
   from inside the **Edit** dialog — enter a new password there, or leave it empty to keep the
   current one.
+
+## Authentication
+
+- The admin console uses **JWT access + refresh**. Login returns both tokens.
+- On a `401`, the Axios interceptor performs **one automatic silent refresh**, then retries.
+- The **login form** renders a Cloudflare Turnstile widget when the manager has Turnstile enabled,
+  sending `cf_turnstile_response` with the login request.
 
 ## Configuring the API address
 
