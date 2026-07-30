@@ -122,6 +122,7 @@ export interface User {
   enabled: boolean
   email_verified?: boolean
   max_invites?: number
+  last_traffic_at?: string // last node-reported traffic delta timestamp
   created_at: string
   updated_at: string
 }

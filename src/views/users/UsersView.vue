@@ -420,6 +420,9 @@ function onCommand(cmd: string, row: User) {
         <el-table-column label="Expire" width="180" prop="expire_at" sortable="custom">
           <template #default="{ row }">{{ formatDateTime(row.expire_at) }}</template>
         </el-table-column>
+        <el-table-column label="Last Traffic" width="180" prop="last_traffic_at">
+          <template #default="{ row }">{{ formatDateTime(row.last_traffic_at) }}</template>
+        </el-table-column>
         <el-table-column label="Actions" min-width="50" fixed="right">
           <template #default="{ row }">
             <div class="actions">
