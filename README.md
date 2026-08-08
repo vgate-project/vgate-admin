@@ -52,12 +52,17 @@ to the backend without CORS issues during local development.
 
 ## What you can do
 
+- **Dashboard**: the landing page with stat cards, day-over-day trends, a 24-hour traffic chart,
+  node status, and health lists (expiring plans, quota-exhausted and unverified users).
 - **Nodes**: create/edit proxy nodes, set their listen port, transport (`tcp`/`ws`/`xhttp`),
-  TLS/Reality security, and per-node speed limits — all delivered to the node via the manager.
+  TLS/Reality security, VLESS v2 AEAD (decryption) settings, and per-node speed limits — all
+  delivered to the node via the manager. Also supports **virtual (multi-IP child) nodes** that
+  inherit their parent's settings.
 - **Users & products**: create users, assign subscription **plans** (quotas, expiry, speed caps),
-  manage **traffic packages** (one-off traffic add-ons), revoke credentials, and set per-user
-  speed limits.
-- **Orders**: view and manage billing orders.
+  manage **traffic packages** (one-off traffic add-ons), revoke credentials, set per-user speed
+  limits, and bulk **clean up zombie users** (inactive accounts over a configurable threshold).
+- **Orders**: view and manage billing orders, and **create orders on behalf of a user** (with a
+  QR/copy payment dialog).
 - **Traffic**: inspect per-user and per-node usage and stats.
 - **System config**: tune hot-reloadable settings via `PUT /api/v1/admin/system-config`, including
   JWT TTLs, log level/format, CORS origins, timeouts, **Captcha / Cloudflare Turnstile**,
@@ -69,7 +74,8 @@ to the backend without CORS issues during local development.
 - **Messaging**: a single page with three tabs — **Announcements** (publish notices to the user
   portal), **Email** (broadcast an email to all/active/selected users, optionally also creating an
   announcement), and **Telegram** (broadcast a message to every linked user). From **Settings →
-  Telegram** you can also link your own operator account to receive ticket alerts.
+  Telegram** you can also link your own operator account to receive ticket alerts, and **Settings**
+  holds the signed-in admin's own password change.
 - **Email config**: configure the outbound mail backend under **System Config → Email**. The
   **General** tab holds the provider (`smtp` / `resend`), the enabled switch, the shared **From**
   address, and an optional **From Name**. Use the **Test Email** button on that tab to send a probe
