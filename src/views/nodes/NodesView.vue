@@ -9,12 +9,22 @@ import NodeUsersDialog from './NodeUsersDialog.vue'
 import CopyableTokenDialog from '@/components/CopyableTokenDialog.vue'
 import {Plus, ArrowDown, Right} from "@element-plus/icons-vue";
 
-const nodes = ref<Node[]>([])
-const loading = ref(false)
-const page = ref(1)
-const pageSize = ref(20)
-const total = ref(0)
-const typeFilter = ref<'all' | 'real' | 'virtual'>('all')
+// Real and virtual node lists are paginated independently so switching tabs
+// preserves each tab's scroll position and pagination state. Both tabs fetch
+// from the same /admin/nodes endpoint with the matching `type` filter.
+const realNodes = ref<Node[]>([])
+const realLoading = ref(false)
+const realPage = ref(1)
+const realPageSize = ref(20)
+const realTotal = ref(0)
+
+const virtualNodes = ref<Node[]>([])
+const virtualLoading = ref(false)
+const virtualPage = ref(1)
+const virtualPageSize = ref(20)
+const virtualTotal = ref(0)
+
+const activeTab = ref<'real' | 'virtual'>('real')
 
 const editorVisible = ref(false)
 const editingNode = ref<Node | null>(null)
@@ -47,25 +57,53 @@ const emptyText = computed(() =>
 )
 
 async function load() {
-  loading.value = true
+  // Load whichever tab is currently active. The other tab keeps its previous
+  // items so we don't pay the network round-trip just to display the heading.
+  if (activeTab.value === 'real') {
+    await loadReal()
+  } else {
+    await loadVirtual()
+  }
+}
+async function loadReal() {
+  realLoading.value = true
   try {
-    const { data } = await apiNodes.list(page.value, pageSize.value, typeFilter.value)
-    nodes.value = data.items
-    total.value = data.total
+    const { data } = await apiNodes.list(realPage.value, realPageSize.value, 'real')
+    realNodes.value = data.items
+    realTotal.value = data.total
   } finally {
-    loading.value = false
+    realLoading.value = false
+  }
+}
+async function loadVirtual() {
+  virtualLoading.value = true
+  try {
+    const { data } = await apiNodes.list(virtualPage.value, virtualPageSize.value, 'virtual')
+    virtualNodes.value = data.items
+    virtualTotal.value = data.total
+  } finally {
+    virtualLoading.value = false
   }
 }
 onMounted(load)
 
-function onSizeChange() {
-  page.value = 1
-  load()
+function onRealSizeChange() {
+  realPage.value = 1
+  loadReal()
 }
-
-function onTypeChange() {
-  page.value = 1
-  load()
+function onVirtualSizeChange() {
+  virtualPage.value = 1
+  loadVirtual()
+}
+function onTabChange() {
+  // Switching to a tab we haven't loaded yet triggers a first fetch. If the
+  // tab already has items (the user has visited it before), no-op so we keep
+  // their scroll / page state.
+  if (activeTab.value === 'real' && realNodes.value.length === 0 && realTotal.value === 0) {
+    loadReal()
+  } else if (activeTab.value === 'virtual' && virtualNodes.value.length === 0 && virtualTotal.value === 0) {
+    loadVirtual()
+  }
 }
 
 function openCreate() {
@@ -90,7 +128,9 @@ async function onDelete(node: Node) {
   }
   await apiNodes.remove(node.id)
   ElMessage.success('Node deleted')
-  load()
+  // Refetch both tabs so a delete that crosses tab boundaries (e.g. removing
+  // a real parent that had virtual children shown) leaves the UI consistent.
+  await Promise.all([loadReal(), loadVirtual()])
 }
 function onShowTokenDialog(node: Node) {
   tokenNodeId.value = node.id
@@ -167,7 +207,10 @@ function onCommand(cmd: string, row: Node) {
 }
 function onSaved() {
   editorVisible.value = false
-  load()
+  // A save can move a node across tabs (e.g. creating a virtual child from a
+  // real parent) or update cross-tab fields like the parent's name, so refetch
+  // both tabs to keep them in sync.
+  Promise.all([loadReal(), loadVirtual()])
 }
 async function copyId(id: string) {
   try {
@@ -184,116 +227,185 @@ async function copyId(id: string) {
     <div class="toolbar">
       <h2>Nodes</h2>
       <div class="toolbar-right">
-        <el-radio-group v-model="typeFilter" size="small" @change="onTypeChange">
-          <el-radio-button value="all">All</el-radio-button>
-          <el-radio-button value="real">Real</el-radio-button>
-          <el-radio-button value="virtual">Virtual</el-radio-button>
-        </el-radio-group>
         <el-button type="primary" @click="openCreate">
           <el-icon><Plus /></el-icon><span>New Node</span>
         </el-button>
       </div>
     </div>
     <el-card shadow="never">
-      <el-table
-        :data="nodes"
-        v-loading="loading"
-        empty-text="No nodes yet"
-        max-height="calc(100vh - 200px)"
-      >
-        <el-table-column label="ID" width="110">
-          <template #default="{ row }">
-            <el-tooltip :content="row.id" placement="top" :hide-after="0">
-              <span class="id-cell" @click="copyId(row.id)">{{ row.id.slice(-8) }}</span>
-            </el-tooltip>
-          </template>
-        </el-table-column>
-        <el-table-column prop="name" label="Name" min-width="140">
-          <template #default="{ row }">
-            <el-tooltip v-if="row.parent_id" placement="top" :hide-after="0">
-              <span class="virtual-name">
-                <el-icon class="virtual-caret"><Right /></el-icon>{{ row.name }}
-              </span>
-              <template #content>
-                <div>Parent: {{ row.parent_name || '(unknown)' }}</div>
-                <div>ID: {{ row.parent_id }}</div>
+      <el-tabs v-model="activeTab" @tab-change="onTabChange">
+        <el-tab-pane label="Real" name="real">
+          <el-table
+            :data="realNodes"
+            v-loading="realLoading"
+            empty-text="No real nodes yet"
+            max-height="calc(100vh - 240px)"
+          >
+            <el-table-column label="ID" width="110">
+              <template #default="{ row }">
+                <el-tooltip :content="row.id" placement="top" :hide-after="0">
+                  <span class="id-cell" @click="copyId(row.id)">{{ row.id.slice(-8) }}</span>
+                </el-tooltip>
               </template>
-            </el-tooltip>
-            <span v-else>{{ row.name }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="Type" width="110">
-          <template #default="{ row }">
-            <el-tag v-if="row.parent_id" type="warning" size="small">Virtual</el-tag>
-            <el-tag v-else type="success" size="small">Real</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="Address" min-width="180">
-          <template #default="{ row }">{{ row.address }}<span v-if="row.port" class="muted">:{{ row.port }}</span></template>
-        </el-table-column>
-        <el-table-column label="Transport / Security" min-width="150">
-          <template #default="{ row }">
-            <span>{{ row.network }}</span><span v-if="row.security && row.security !== 'none'" class="muted"> / {{ row.security }}</span>
-            <span v-if="row.parent_id" class="muted"> (inherit)</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="level" label="Level" width="70" />
-        <el-table-column label="Mult." width="70">
-          <template #default="{ row }">
-            <span v-if="!row.parent_id">{{ (row.traffic_multiplier ?? 1).toFixed(2) }}<span v-if="(row.traffic_multiplier ?? 1) !== 1" class="muted">×</span></span>
-            <span v-else class="muted">inherit</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="Online" width="120">
-          <template #default="{ row }">
-            <el-tag :type="row.online ? 'success' : 'info'" size="small">
-              {{ formatRelative(row.last_seen_at) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="Enabled" width="80">
-          <template #default="{ row }">
-            <el-tag :type="row.enabled ? 'success' : 'danger'" size="small">
-              {{ row.enabled ? 'on' : 'off' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="Created" width="160">
-          <template #default="{ row }">{{ formatDateTime(row.created_at) }}</template>
-        </el-table-column>
-        <el-table-column label="Actions" min-width="180" fixed="right">
-          <template #default="{ row }">
-            <div class="actions">
-              <el-button size="small" @click="openEdit(row as Node)">Edit</el-button>
-              <el-button v-if="!row.parent_id" size="small" @click="onShowConfig(row as Node)">Config</el-button>
-              <el-dropdown trigger="click" @command="(c: string) => onCommand(c, row as Node)">
-                <el-button size="small">
-                  More<el-icon class="el-icon--right"><ArrowDown /></el-icon>
-                </el-button>
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item v-if="!row.parent_id" command="addchild">Add child</el-dropdown-item>
-                    <el-dropdown-item command="users">Users</el-dropdown-item>
-                    <el-dropdown-item :disabled="!!row.parent_id" command="token">Token</el-dropdown-item>
-                    <el-dropdown-item v-if="!!row.parent_id" :disabled="true" command="config">Config</el-dropdown-item>
-                    <el-dropdown-item divided command="delete">Delete</el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
-            </div>
-          </template>
-        </el-table-column>
-      </el-table>
-      <el-pagination
-        v-model:current-page="page"
-        v-model:page-size="pageSize"
-        :total="total"
-        :page-sizes="[10, 20, 50, 100]"
-        layout="total, sizes, prev, pager, next"
-        class="pager"
-        @size-change="onSizeChange"
-        @current-change="load"
-      />
+            </el-table-column>
+            <el-table-column prop="name" label="Name" min-width="140">
+              <template #default="{ row }">
+                <span>{{ row.name }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="Address" min-width="180">
+              <template #default="{ row }">{{ row.address }}<span v-if="row.port" class="muted">:{{ row.port }}</span></template>
+            </el-table-column>
+            <el-table-column label="Transport / Security" min-width="150">
+              <template #default="{ row }">
+                <span>{{ row.network }}</span><span v-if="row.security && row.security !== 'none'" class="muted"> / {{ row.security }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="level" label="Level" width="70" />
+            <el-table-column label="Mult." width="70">
+              <template #default="{ row }">
+                {{ (row.traffic_multiplier ?? 1).toFixed(2) }}<span v-if="(row.traffic_multiplier ?? 1) !== 1" class="muted">×</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="Online" width="120">
+              <template #default="{ row }">
+                <el-tag :type="row.online ? 'success' : 'info'" size="small">
+                  {{ formatRelative(row.last_seen_at) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="Enabled" width="80">
+              <template #default="{ row }">
+                <el-tag :type="row.enabled ? 'success' : 'danger'" size="small">
+                  {{ row.enabled ? 'on' : 'off' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="Created" width="160">
+              <template #default="{ row }">{{ formatDateTime(row.created_at) }}</template>
+            </el-table-column>
+            <el-table-column label="Actions" min-width="180" fixed="right">
+              <template #default="{ row }">
+                <div class="actions">
+                  <el-button size="small" @click="openEdit(row as Node)">Edit</el-button>
+                  <el-button size="small" @click="onShowConfig(row as Node)">Config</el-button>
+                  <el-dropdown trigger="click" @command="(c: string) => onCommand(c, row as Node)">
+                    <el-button size="small">
+                      More<el-icon class="el-icon--right"><ArrowDown /></el-icon>
+                    </el-button>
+                    <template #dropdown>
+                      <el-dropdown-menu>
+                        <el-dropdown-item command="addchild">Add child</el-dropdown-item>
+                        <el-dropdown-item command="users">Users</el-dropdown-item>
+                        <el-dropdown-item command="token">Token</el-dropdown-item>
+                        <el-dropdown-item divided command="delete">Delete</el-dropdown-item>
+                      </el-dropdown-menu>
+                    </template>
+                  </el-dropdown>
+                </div>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-pagination
+            v-model:current-page="realPage"
+            v-model:page-size="realPageSize"
+            :total="realTotal"
+            :page-sizes="[10, 20, 50, 100]"
+            layout="total, sizes, prev, pager, next"
+            class="pager"
+            @size-change="onRealSizeChange"
+            @current-change="loadReal"
+          />
+        </el-tab-pane>
+        <el-tab-pane label="Virtual" name="virtual">
+          <el-table
+            :data="virtualNodes"
+            v-loading="virtualLoading"
+            empty-text="No virtual nodes yet"
+            max-height="calc(100vh - 240px)"
+          >
+            <el-table-column label="ID" width="110">
+              <template #default="{ row }">
+                <el-tooltip :content="row.id" placement="top" :hide-after="0">
+                  <span class="id-cell" @click="copyId(row.id)">{{ row.id.slice(-8) }}</span>
+                </el-tooltip>
+              </template>
+            </el-table-column>
+            <el-table-column prop="name" label="Name" min-width="140">
+              <template #default="{ row }">
+                <span class="virtual-name">
+                  <el-icon class="virtual-caret"><Right /></el-icon>{{ row.name }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column label="Parent" min-width="140">
+              <template #default="{ row }">
+                <span class="muted">{{ row.parent_name || row.parent_id || '—' }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="Address" min-width="180">
+              <template #default="{ row }">{{ row.address }}<span v-if="row.port" class="muted">:{{ row.port }}</span></template>
+            </el-table-column>
+            <el-table-column label="Transport / Security" min-width="150">
+              <template #default="{ row }">
+                <span>{{ row.network }}</span><span v-if="row.security && row.security !== 'none'" class="muted"> / {{ row.security }}</span>
+                <span class="muted"> (inherit)</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="level" label="Level" width="70" />
+            <el-table-column label="Mult." width="70">
+              <template #default="{ row }">
+                <span class="muted">inherit</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="Online" width="120">
+              <template #default="{ row }">
+                <el-tag :type="row.online ? 'success' : 'info'" size="small">
+                  {{ formatRelative(row.last_seen_at) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="Enabled" width="80">
+              <template #default="{ row }">
+                <el-tag :type="row.enabled ? 'success' : 'danger'" size="small">
+                  {{ row.enabled ? 'on' : 'off' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="Created" width="160">
+              <template #default="{ row }">{{ formatDateTime(row.created_at) }}</template>
+            </el-table-column>
+            <el-table-column label="Actions" min-width="160" fixed="right">
+              <template #default="{ row }">
+                <div class="actions">
+                  <el-button size="small" @click="openEdit(row as Node)">Edit</el-button>
+                  <el-dropdown trigger="click" @command="(c: string) => onCommand(c, row as Node)">
+                    <el-button size="small">
+                      More<el-icon class="el-icon--right"><ArrowDown /></el-icon>
+                    </el-button>
+                    <template #dropdown>
+                      <el-dropdown-menu>
+                        <el-dropdown-item command="users">Users</el-dropdown-item>
+                        <el-dropdown-item divided command="delete">Delete</el-dropdown-item>
+                      </el-dropdown-menu>
+                    </template>
+                  </el-dropdown>
+                </div>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-pagination
+            v-model:current-page="virtualPage"
+            v-model:page-size="virtualPageSize"
+            :total="virtualTotal"
+            :page-sizes="[10, 20, 50, 100]"
+            layout="total, sizes, prev, pager, next"
+            class="pager"
+            @size-change="onVirtualSizeChange"
+            @current-change="loadVirtual"
+          />
+        </el-tab-pane>
+      </el-tabs>
     </el-card>
 
     <NodeEditorDialog v-model="editorVisible" :node="editingNode" :default-parent-id="childParentId" @saved="onSaved" />
@@ -366,6 +478,14 @@ async function copyId(id: string) {
 .pager {
   margin-top: 12px;
   justify-content: flex-end;
+}
+/* The nodes card wraps the two tabs; tighten the default el-tabs top spacing
+   so the table sits high inside the card. */
+:deep(.el-tabs__header) {
+  margin-bottom: 12px;
+}
+:deep(.el-tabs--card > .el-tabs__header) {
+  margin-bottom: 12px;
 }
 h2 {
   margin: 0;

@@ -18,6 +18,16 @@ const series = ref<HourlyStat[]>([])
 // Node Status table reads the shared reference store (cached app-wide) instead
 // of a second dedicated node-list request on every dashboard load.
 const nodes = computed(() => reference.nodes)
+// Split into real vs virtual so the two panes each show the right subset.
+// Virtual children (parent_id IS NOT NULL) inherit liveness from their real
+// parent — they're surfaced separately so admins can see them, but they don't
+// affect the dashboard aggregates above.
+const realNodes = computed(() => nodes.value.filter((n) => !n.parent_id))
+const virtualNodes = computed(() => nodes.value.filter((n) => n.parent_id))
+const activeNodeTab = ref<'real' | 'virtual'>('real')
+const activeNodeCount = computed(() =>
+  activeNodeTab.value === 'real' ? realNodes.value.length : virtualNodes.value.length,
+)
 const orderCount24h = ref(0)
 const orderAmount24h = ref(0)
 const loading = ref(true)
@@ -208,38 +218,72 @@ onMounted(async () => {
         <el-card shadow="never" class="node-card">
           <div class="chart-header">
             <span class="chart-title">Node Status</span>
-            <span class="node-count">{{ nodes.length }}</span>
+            <span class="node-count">{{ activeNodeCount }}</span>
           </div>
-          <el-table :data="nodes" size="small" empty-text="No nodes" max-height="220">
-            <el-table-column label="Name" min-width="160">
-              <template #default="{ row }">
-                <span class="node-name">{{ row.name }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="Address" min-width="160">
-              <template #default="{ row }">
-                <span class="node-addr">{{ row.address }}:{{ row.port }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="Status" width="110">
-              <template #default="{ row }">
-                <el-tag :type="row.online ? 'success' : 'info'" size="small">
-                  {{ row.online ? 'Online' : 'Offline' }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="Multiplier" width="100">
-              <template #default="{ row }">
-                <span v-if="!row.parent_id">{{ (row.traffic_multiplier ?? 1).toFixed(2) }}</span>
-                <span v-else style="color: #909399">inherit</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="Last seen" min-width="120">
-              <template #default="{ row }">
-                {{ formatRelative(row.last_seen_at) }}
-              </template>
-            </el-table-column>
-          </el-table>
+          <el-tabs v-model="activeNodeTab" class="node-tabs">
+            <el-tab-pane label="Real" name="real">
+              <el-table :data="realNodes" size="small" empty-text="No real nodes" max-height="220">
+                <el-table-column label="Name" min-width="160">
+                  <template #default="{ row }">
+                    <span class="node-name">{{ row.name }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="Address" min-width="160">
+                  <template #default="{ row }">
+                    <span class="node-addr">{{ row.address }}:{{ row.port }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="Status" width="110">
+                  <template #default="{ row }">
+                    <el-tag :type="row.online ? 'success' : 'info'" size="small">
+                      {{ row.online ? 'Online' : 'Offline' }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column label="Multiplier" width="100">
+                  <template #default="{ row }">
+                    <span>{{ (row.traffic_multiplier ?? 1).toFixed(2) }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="Last seen" min-width="120">
+                  <template #default="{ row }">
+                    {{ formatRelative(row.last_seen_at) }}
+                  </template>
+                </el-table-column>
+              </el-table>
+            </el-tab-pane>
+            <el-tab-pane label="Virtual" name="virtual">
+              <el-table :data="virtualNodes" size="small" empty-text="No virtual nodes" max-height="220">
+                <el-table-column label="Name" min-width="160">
+                  <template #default="{ row }">
+                    <span class="node-name">{{ row.name }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="Address" min-width="160">
+                  <template #default="{ row }">
+                    <span class="node-addr">{{ row.address }}:{{ row.port }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="Parent" min-width="140">
+                  <template #default="{ row }">
+                    <span style="color: #909399">{{ row.parent_name || row.parent_id || '—' }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="Status" width="110">
+                  <template #default="{ row }">
+                    <el-tag :type="row.online ? 'success' : 'info'" size="small">
+                      {{ row.online ? 'Online' : 'Offline' }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column label="Multiplier" width="100">
+                  <template #default="{ row }">
+                    <span style="color: #909399">inherit</span>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </el-tab-pane>
+          </el-tabs>
         </el-card>
       </el-col>
     </el-row>
@@ -303,6 +347,14 @@ onMounted(async () => {
 .node-count {
   font-size: 12px;
   color: #909399;
+}
+/* Keep the dashboard's Node Status tabs compact so the table sits high in
+   the card. Default el-tabs brings a 16px top margin we don't want here. */
+.node-tabs {
+  margin-top: -8px;
+}
+.node-tabs :deep(.el-tabs__header) {
+  margin-bottom: 8px;
 }
 .node-name {
   font-weight: 500;
