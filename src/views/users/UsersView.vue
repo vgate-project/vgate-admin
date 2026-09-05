@@ -359,12 +359,13 @@ function onCommand(cmd: string, row: User) {
       <el-table
           :data="users"
           v-loading="loading"
+          size="small"
           empty-text="No users yet"
           max-height="70vh"
           @sort-change="onSortChange"
       >
         <el-table-column type="index" width="50" />
-        <el-table-column prop="email" label="Email" width="300" sortable="custom">
+        <el-table-column prop="email" label="Email" width="230" sortable="custom">
           <template #default="{ row }">
             <div style="display: flex; align-items: center; gap: 6px">
               <span>{{ row.email }}</span>
@@ -377,7 +378,7 @@ function onCommand(cmd: string, row: User) {
         <el-table-column prop="username" label="Username" width="120" sortable="custom">
           <template #default="{ row }">{{ row.username ?? '—' }}</template>
         </el-table-column>
-        <el-table-column prop="level" label="Level" width="100" sortable="custom"/>
+        <el-table-column prop="level" label="Level" width="80" sortable="custom"/>
         <el-table-column label="Enabled" width="80">
           <template #default="{ row }">
             <el-tag :type="row.enabled ? 'success' : 'danger'" size="small">
@@ -417,10 +418,10 @@ function onCommand(cmd: string, row: User) {
         <el-table-column label="Download" width="120" prop="down_total" sortable="custom">
           <template #default="{ row }">{{ formatBytes(row.down_total) }}</template>
         </el-table-column>
-        <el-table-column label="Expire" width="180" prop="expire_at" sortable="custom">
+        <el-table-column label="Expire" width="150" prop="expire_at" sortable="custom">
           <template #default="{ row }">{{ formatDateTime(row.expire_at) }}</template>
         </el-table-column>
-        <el-table-column label="Last Traffic" width="180" prop="last_traffic_at">
+        <el-table-column label="Last Traffic" width="150" prop="last_traffic_at">
           <template #default="{ row }">{{ formatDateTime(row.last_traffic_at) }}</template>
         </el-table-column>
         <el-table-column label="Actions" min-width="50" fixed="right">

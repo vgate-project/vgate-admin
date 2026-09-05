@@ -238,6 +238,7 @@ async function copyId(id: string) {
           <el-table
             :data="realNodes"
             v-loading="realLoading"
+            size="small"
             empty-text="No real nodes yet"
             max-height="calc(100vh - 240px)"
           >
@@ -321,6 +322,7 @@ async function copyId(id: string) {
           <el-table
             :data="virtualNodes"
             v-loading="virtualLoading"
+            size="small"
             empty-text="No virtual nodes yet"
             max-height="calc(100vh - 240px)"
           >
