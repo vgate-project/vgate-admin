@@ -58,6 +58,7 @@ export interface Node {
   settings: Record<string, any> | null
   tls_settings?: TLSConfig | null
   reality_settings?: RealityConfig | null
+  reality_sid?: string
   vless?: VLESS | null
   flow: Flow
   allow_insecure: boolean
@@ -87,6 +88,7 @@ export interface NodeRequest {
   settings?: Record<string, any> | null
   tls_settings?: TLSConfig | null
   reality_settings?: RealityConfig | null
+  reality_sid?: string
   vless?: VLESS | null
   flow?: Flow
   level?: number

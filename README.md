@@ -53,17 +53,23 @@ to the backend without CORS issues during local development.
 ## What you can do
 
 - **Dashboard**: the landing page with stat cards, day-over-day trends, a 24-hour traffic chart,
-  node status, and health lists (expiring plans, quota-exhausted and unverified users).
+  node status (Real / Virtual tabs), and health lists (expiring plans, quota-exhausted and
+  unverified users). Node counts cover real nodes only — virtual children never poll.
 - **Nodes**: create/edit proxy nodes, set their listen port, transport (`tcp`/`ws`/`xhttp`),
   TLS/Reality security, VLESS v2 AEAD (decryption) settings, and per-node speed limits — all
-  delivered to the node via the manager. Also supports **virtual (multi-IP child) nodes** that
-  inherit their parent's settings.
+  delivered to the node via the manager. The list is split into **Real** and **Virtual** tabs with
+  independent pagination. **Virtual (multi-IP child) nodes** inherit their parent's transport
+  settings and can carry a dedicated **Reality Short ID** (auto-generated when left empty) used
+  for entry-point traffic attribution; the manager keeps it in the parent's `short_ids`
+  whitelist and subscription links for that child advertise it.
 - **Users & products**: create users, assign subscription **plans** (quotas, expiry, speed caps),
   manage **traffic packages** (one-off traffic add-ons), revoke credentials, set per-user speed
   limits, and bulk **clean up zombie users** (inactive accounts over a configurable threshold).
 - **Orders**: view and manage billing orders, and **create orders on behalf of a user** (with a
   QR/copy payment dialog).
-- **Traffic**: inspect per-user and per-node usage and stats.
+- **Traffic**: inspect per-user and per-node usage and stats. Traffic is reported per entry
+  point, so rows appear under each virtual child whose Reality short ID the client connected
+  with (labeled `· virtual`), not only under the real node.
 - **System config**: tune hot-reloadable settings via `PUT /api/v1/admin/system-config`, including
   JWT TTLs, log level/format, CORS origins, timeouts, **Captcha / Cloudflare Turnstile**,
   registration modes (open / invite-gated / email-suffix allowlist), password policy, **trial

@@ -8,6 +8,9 @@ import { formatBytes } from '@/utils/format'
 const reference = useReferenceStore()
 const rows = ref<TrafficRow[]>([])
 const users = computed(() => reference.users)
+// Traffic rows are attributed to the real node by default, or to a virtual
+// child when the client connected through that child's dedicated Reality
+// short ID — so the filter picker and row labels list all nodes.
 const nodes = computed(() => reference.nodes)
 const loading = ref(false)
 const filterUserId = ref<string>('')
@@ -44,7 +47,9 @@ function onFilter() {
 
 function nodeLabel(id: string): string {
   const n = nodes.value.find((n) => n.id === id)
-  return n ? `${n.name} (${n.address}:${n.port})` : id
+  if (!n) return id
+  const label = `${n.name} (${n.address}:${n.port})`
+  return n.parent_id ? `${label} · virtual` : label
 }
 </script>
 
@@ -60,7 +65,7 @@ function nodeLabel(id: string): string {
         </el-form-item>
         <el-form-item label="Node">
           <el-select v-model="filterNodeId" clearable placeholder="All nodes" style="width: 200px">
-            <el-option v-for="n in nodes" :key="n.id" :label="`${n.name} (${n.address}:${n.port})`" :value="n.id" />
+            <el-option v-for="n in nodes" :key="n.id" :label="nodeLabel(n.id)" :value="n.id" />
           </el-select>
         </el-form-item>
         <el-form-item>

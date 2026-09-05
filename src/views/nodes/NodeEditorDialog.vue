@@ -50,6 +50,7 @@ const form = reactive({
   } as VLESS,
   flow: '' as Flow,
   allow_insecure: false,
+  reality_sid: '',
   traffic_multiplier: 1,
   speed_limit_up_mbps: 0,
   speed_limit_down_mbps: 0,
@@ -63,6 +64,14 @@ const reference = useReferenceStore()
 // reference store instead of re-fetching the node list on every dialog open.
 // Virtual nodes are excluded so a child can never point at another child.
 const parentNodes = computed<Node[]>(() => reference.nodes.filter((n) => !n.parent_id))
+
+// Whether the selected parent uses reality — only then does a dedicated short
+// ID make sense (it lives in the parent's short_ids whitelist).
+const parentIsReality = computed(() => {
+  if (!form.parentId) return false
+  const p = reference.nodes.find((n) => n.id === form.parentId)
+  return p?.security === 'reality'
+})
 
 const v2Enabled = computed(() => !!form.vless.decryption && form.vless.decryption !== 'none')
 
@@ -92,6 +101,7 @@ function resetForm() {
   form.vless = { decryption: '', xor_mode: 0, seconds_from: 300, seconds_to: 600, padding: '' }
   form.flow = ''
   form.allow_insecure = false
+  form.reality_sid = ''
   form.traffic_multiplier = 1
   form.speed_limit_up_mbps = 0
   form.speed_limit_down_mbps = 0
@@ -107,6 +117,7 @@ function prefillFromNode(node: Node) {
     form.name = node.name
     form.address = node.address
     form.port = node.port // 0 = inherit parent port
+    form.reality_sid = node.reality_sid ?? ''
     form.enabled = node.enabled
     void reference.get()
     return
@@ -167,6 +178,9 @@ function buildRequest(): NodeRequest | null {
       parent_id: form.parentId,
       address: form.address,
       port: form.port, // 0 = inherit parent port
+      // Dedicated Reality short ID for entry-point attribution; empty = use
+      // the parent's default (the manager auto-generates on create).
+      reality_sid: form.reality_sid.trim().toLowerCase(),
       enabled: form.enabled,
     }
   }
@@ -301,6 +315,12 @@ async function onGenerateVlessKey() {
         <el-form-item label="Port" :required="!form.isVirtual">
           <el-input-number v-model="form.port" :min="0" :max="65535" />
           <span class="hint">0 = inherit parent port</span>
+        </el-form-item>
+        <el-form-item v-if="parentIsReality" label="Reality Short ID">
+          <el-input v-model="form.reality_sid" placeholder="Leave empty to auto-generate (16 hex chars)" style="max-width: 320px" />
+          <span class="hint">
+            Dedicated short ID for entry-point attribution: subscription links for this node use it, and traffic arriving with it is booked to this node instead of the parent. The manager adds it to the parent's short_ids whitelist automatically. Only tcp+reality connections are attributable — ws/xhttp entry points keep booking to the parent. Changing it requires users to re-import their subscription.
+          </span>
         </el-form-item>
         <el-form-item label="Enabled">
           <el-switch v-model="form.enabled" />
