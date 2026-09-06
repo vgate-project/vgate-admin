@@ -254,6 +254,12 @@ async function copyId(id: string) {
                 <span>{{ row.name }}</span>
               </template>
             </el-table-column>
+            <el-table-column label="Own SID" width="150">
+              <template #default="{ row }">
+                <span v-if="row.reality_sid" class="id-cell">{{ row.reality_sid }}</span>
+                <span v-else class="muted">—</span>
+              </template>
+            </el-table-column>
             <el-table-column label="Address" min-width="180">
               <template #default="{ row }">{{ row.address }}<span v-if="row.port" class="muted">:{{ row.port }}</span></template>
             </el-table-column>
@@ -345,7 +351,7 @@ async function copyId(id: string) {
                 <span class="muted">{{ row.parent_name || row.parent_id || '—' }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="SID" width="130">
+            <el-table-column label="Own SID" width="150">
               <template #default="{ row }">
                 <span v-if="row.reality_sid" class="id-cell">{{ row.reality_sid }}</span>
                 <span v-else class="muted">—</span>

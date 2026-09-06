@@ -127,6 +127,7 @@ function prefillFromNode(node: Node) {
   form.name = node.name
   form.address = node.address
   form.port = node.port
+  form.reality_sid = node.reality_sid ?? ''
   form.network = node.network
   form.security = node.security
   form.settingsJson = node.settings ? JSON.stringify(node.settings, null, 2) : ''
@@ -208,6 +209,9 @@ function buildRequest(): NodeRequest | null {
     vless: v2Enabled.value ? { ...form.vless } : null,
     flow: v2Enabled.value ? '' : form.flow,
     allow_insecure: form.allow_insecure,
+    // The node's own Reality short ID — auto-generated and kept unique when
+    // left empty; virtual children's sids never take it (child priority).
+    reality_sid: form.reality_sid.trim().toLowerCase(),
     level: form.level,
     traffic_multiplier: form.traffic_multiplier > 0 ? form.traffic_multiplier : 1,
     speed_limit_up_bps: Math.round(form.speed_limit_up_mbps * BPS_PER_MBPS),
@@ -414,8 +418,9 @@ async function onGenerateVlessKey() {
                   </el-button>
                 </div>
               </el-form-item>
-              <el-form-item label="Short IDs">
-                <TagListInput v-model="form.reality.short_ids" placeholder="0123456789abcdef" />
+              <el-form-item label="Own SID">
+                <el-input v-model="form.reality_sid" placeholder="Leave empty to auto-generate (16 hex chars)" style="max-width: 320px" />
+                <span class="hint">This node's own short ID — advertised in its share links and used to attribute its traffic. Auto-generated and kept unique when left empty; virtual children get their own and never take yours. The short_ids whitelist delivered to the node combines yours with every child's automatically.</span>
               </el-form-item>
               <el-form-item label="Min client ver">
                 <el-input v-model="form.reality.min_client_ver" placeholder="1.8.16" />
