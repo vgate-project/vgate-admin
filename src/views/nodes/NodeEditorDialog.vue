@@ -182,6 +182,8 @@ function buildRequest(): NodeRequest | null {
       // Dedicated Reality short ID for entry-point attribution; empty = use
       // the parent's default (the manager auto-generates on create).
       reality_sid: form.reality_sid.trim().toLowerCase(),
+      // The child's own billing multiplier — independent of the parent's.
+      traffic_multiplier: form.traffic_multiplier > 0 ? form.traffic_multiplier : 1,
       enabled: form.enabled,
     }
   }
@@ -319,6 +321,10 @@ async function onGenerateVlessKey() {
         <el-form-item label="Port" :required="!form.isVirtual">
           <el-input-number v-model="form.port" :min="0" :max="65535" />
           <span class="hint">0 = inherit parent port</span>
+        </el-form-item>
+        <el-form-item label="Traffic multiplier">
+          <el-input-number v-model="form.traffic_multiplier" :min="0.01" :max="1000" :step="0.1" :precision="2" />
+          <span class="hint">This child's own billing multiplier — independent of the parent (1 = no change).</span>
         </el-form-item>
         <el-form-item v-if="parentIsReality" label="Reality Short ID">
           <el-input v-model="form.reality_sid" placeholder="Leave empty to auto-generate (16 hex chars)" style="max-width: 320px" />

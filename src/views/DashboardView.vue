@@ -83,9 +83,22 @@ const TrendBadge = defineComponent({
   },
 })
 
-onMounted(async () => {
+// Node filter for the traffic chart / 24h traffic card ('' = all nodes).
+// Backend semantics: only the traffic series and up_24h/down_24h narrow to
+// the selected entry point; every other card stays global.
+const filterNodeId = ref('')
+
+function nodeLabel(id: string): string {
+  const n = nodes.value.find((n) => n.id === id)
+  if (!n) return id
+  const label = `${n.name} (${n.address}:${n.port})`
+  return n.parent_id ? `${label} · virtual` : label
+}
+
+async function loadOverview() {
+  loading.value = true
   try {
-    const { data } = await apiStats.overview()
+    const { data } = await apiStats.overview(filterNodeId.value || undefined)
     nodeCount.value = data.node_count
     onlineCount.value = data.node_online
     userCount.value = data.user_count
@@ -105,13 +118,21 @@ onMounted(async () => {
     down24hPrev.value = data.down_24h_prev
     onlineUsers24hPrev.value = data.online_users_24h_prev
     orderCount24hPrev.value = data.order_count_24h_prev
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(async () => {
+  try {
+    await loadOverview()
     try {
       await reference.get()
     } catch (e) {
       console.error('failed to load node status', e)
     }
-  } finally {
-    loading.value = false
+  } catch (e) {
+    console.error('failed to load overview', e)
   }
 })
 </script>
@@ -211,6 +232,19 @@ onMounted(async () => {
     <el-row :gutter="16" class="bottom-row">
       <el-col :span="12">
         <el-card shadow="never" class="chart-card">
+          <div class="chart-filter">
+            <el-select
+              v-model="filterNodeId"
+              clearable
+              filterable
+              placeholder="All nodes"
+              size="small"
+              style="width: 260px"
+              @change="loadOverview"
+            >
+              <el-option v-for="n in nodes" :key="n.id" :label="nodeLabel(n.id)" :value="n.id" />
+            </el-select>
+          </div>
           <TrafficBarChart :data="series" />
         </el-card>
       </el-col>
@@ -340,6 +374,11 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   width: 100%;
+}
+.chart-filter {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
 }
 .node-card {
   min-height: 100%;
