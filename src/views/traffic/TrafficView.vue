@@ -2,11 +2,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { apiTraffic } from '@/api/traffic'
 import { useReferenceStore } from '@/stores/reference'
-import type { TrafficRow } from '@/types/wire'
-import { formatBytes } from '@/utils/format'
+import type { TrafficRecord } from '@/types/wire'
+import { formatBytes, formatDateTime } from '@/utils/format'
 
 const reference = useReferenceStore()
-const rows = ref<TrafficRow[]>([])
+const rows = ref<TrafficRecord[]>([])
 const users = computed(() => reference.users)
 // Traffic rows are attributed to the real node by default, or to a virtual
 // child when the client connected through that child's dedicated Reality
@@ -15,6 +15,9 @@ const nodes = computed(() => reference.nodes)
 const loading = ref(false)
 const filterUserId = ref<string>('')
 const filterNodeId = ref<string>('')
+// Local [start of day, end of day] range; apiTraffic.list converts it to the
+// backend's inclusive-from / exclusive-to hour bounds.
+const filterRange = ref<[Date, Date] | null>(null)
 const page = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
@@ -27,7 +30,13 @@ onMounted(async () => {
 async function loadTraffic() {
   loading.value = true
   try {
-    const { data } = await apiTraffic.list(filterUserId.value, filterNodeId.value, page.value, pageSize.value)
+    const { data } = await apiTraffic.list(
+      filterUserId.value,
+      filterNodeId.value,
+      filterRange.value,
+      page.value,
+      pageSize.value,
+    )
     rows.value = data.items
     total.value = data.total
   } finally {
@@ -51,6 +60,10 @@ function nodeLabel(id: string): string {
   const label = `${n.name} (${n.address}:${n.port})`
   return n.parent_id ? `${label} · virtual` : label
 }
+
+function formatMultiplier(m: number): string {
+  return `×${m.toFixed(2)}`
+}
 </script>
 
 <template>
@@ -68,20 +81,44 @@ function nodeLabel(id: string): string {
             <el-option v-for="n in nodes" :key="n.id" :label="nodeLabel(n.id)" :value="n.id" />
           </el-select>
         </el-form-item>
+        <el-form-item label="Date">
+          <el-date-picker
+            v-model="filterRange"
+            type="daterange"
+            clearable
+            start-placeholder="From"
+            end-placeholder="To"
+            style="width: 240px"
+          />
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="onFilter">Filter</el-button>
         </el-form-item>
       </el-form>
+      <!-- Hourly detail rows: raw reported bytes, the multiplier applied at
+           write time, and the billed bytes charged against the quota. -->
       <el-table :data="rows" v-loading="loading" empty-text="No traffic data">
+        <el-table-column label="Time" min-width="160">
+          <template #default="{ row }">{{ formatDateTime(row.hour) }}</template>
+        </el-table-column>
         <el-table-column prop="email" label="Email" width="180" />
         <el-table-column label="Node" min-width="180">
           <template #default="{ row }">{{ nodeLabel(row.node_id) }}</template>
         </el-table-column>
-        <el-table-column label="Upload" min-width="120">
+        <el-table-column label="Upload" min-width="110">
           <template #default="{ row }">{{ formatBytes(row.up_total) }}</template>
         </el-table-column>
-        <el-table-column label="Download" min-width="120">
+        <el-table-column label="Download" min-width="110">
           <template #default="{ row }">{{ formatBytes(row.down_total) }}</template>
+        </el-table-column>
+        <el-table-column label="Multiplier" min-width="100">
+          <template #default="{ row }">{{ formatMultiplier(row.multiplier) }}</template>
+        </el-table-column>
+        <el-table-column label="Billed Upload" min-width="120">
+          <template #default="{ row }">{{ formatBytes(row.up_billed) }}</template>
+        </el-table-column>
+        <el-table-column label="Billed Download" min-width="120">
+          <template #default="{ row }">{{ formatBytes(row.down_billed) }}</template>
         </el-table-column>
       </el-table>
       <el-pagination

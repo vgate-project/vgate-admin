@@ -1,13 +1,18 @@
 import http from './http'
-import type { TrafficRow } from '@/types/wire'
+import type { TrafficRecord } from '@/types/wire'
 import type { Page, TrafficPackage, TrafficPackageRequest } from '@/types/api'
 
 export const apiTraffic = {
-  list: (userId?: string, nodeId?: string, page = 1, pageSize = 20) => {
+  // range is a local [start of day, end of day] pair; sent as RFC3339 bounds
+  // (from inclusive, to exclusive on the hour bucket — the +1h nudge keeps
+  // the last hour of the picked day inside the range).
+  list: (userId?: string, nodeId?: string, range?: [Date, Date] | null, page = 1, pageSize = 20) => {
     const params: Record<string, string | number> = { page, page_size: pageSize }
     if (userId) params.user_id = userId
     if (nodeId) params.node_id = nodeId
-    return http.get<Page<TrafficRow>>('/admin/traffic', { params })
+    if (range?.[0]) params.from = range[0].toISOString()
+    if (range?.[1]) params.to = new Date(range[1].getTime() + 3600_000).toISOString()
+    return http.get<Page<TrafficRecord>>('/admin/traffic', { params })
   },
 }
 

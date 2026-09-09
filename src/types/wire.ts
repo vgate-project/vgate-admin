@@ -33,10 +33,17 @@ export interface VLESS {
   padding?: string
 }
 
-export interface TrafficRow {
+// One per-user-per-node-per-hour traffic detail row (GET /admin/traffic):
+// the raw (un-multiplied) bytes reported that hour, the multiplier in effect
+// when they were written, and the billed bytes charged against the quota.
+export interface TrafficRecord {
+  hour: string // UTC hour bucket, RFC3339
   user_id: string
   email: string
   node_id: string
   up_total: number
   down_total: number
+  multiplier: number
+  up_billed: number
+  down_billed: number
 }
