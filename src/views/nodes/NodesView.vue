@@ -341,9 +341,7 @@ async function copyId(id: string) {
             </el-table-column>
             <el-table-column prop="name" label="Name" min-width="140">
               <template #default="{ row }">
-                <span class="virtual-name">
-                  <el-icon class="virtual-caret"><Right /></el-icon>{{ row.name }}
-                </span>
+                <span>{{ row.name }}</span>
               </template>
             </el-table-column>
             <el-table-column label="Parent" min-width="140">
@@ -369,7 +367,7 @@ async function copyId(id: string) {
             <el-table-column prop="level" label="Level" width="70" />
             <el-table-column label="Mult." width="70">
               <template #default="{ row }">
-                <span class="muted">inherit</span>
+                {{ (row.traffic_multiplier ?? 1).toFixed(2) }}<span v-if="(row.traffic_multiplier ?? 1) !== 1" class="muted">×</span>
               </template>
             </el-table-column>
             <el-table-column label="Online" width="120">
@@ -452,17 +450,6 @@ async function copyId(id: string) {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-.virtual-name {
-  display: inline-flex;
-  align-items: center;
-  padding-left: 16px;
-  color: #e6a23c;
-}
-.virtual-caret {
-  margin-right: 4px;
-  font-size: 12px;
-  color: #c0c4cc;
 }
 .muted {
   color: #909399;

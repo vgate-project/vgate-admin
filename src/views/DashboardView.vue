@@ -312,7 +312,7 @@ onMounted(async () => {
                 </el-table-column>
                 <el-table-column label="Multiplier" width="100">
                   <template #default="{ row }">
-                    <span style="color: #909399">inherit</span>
+                    <span>{{ (row.traffic_multiplier ?? 1).toFixed(2) }}</span>
                   </template>
                 </el-table-column>
               </el-table>
