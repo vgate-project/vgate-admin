@@ -60,6 +60,7 @@ declare module 'vue' {
     TagListInput: typeof import('./components/TagListInput.vue')['default']
     TicketDot: typeof import('./components/TicketDot.vue')['default']
     TrafficBarChart: typeof import('./components/TrafficBarChart.vue')['default']
+    TrafficTrendChart: typeof import('./components/TrafficTrendChart.vue')['default']
   }
   export interface ComponentCustomProperties {
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']

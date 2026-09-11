@@ -47,3 +47,52 @@ export interface TrafficRecord {
   up_billed: number
   down_billed: number
 }
+
+// TrafficTotals / BucketStat / NodeUsage / TrafficStats mirror
+// service.TrafficStats (manager/internal/service/traffic.go): aggregated usage
+// over a filtered range — totals for the summary cards, a zero-filled
+// hour/day series for the trend chart, and a per-node breakdown.
+export interface TrafficTotals {
+  up: number
+  down: number
+  up_billed: number
+  down_billed: number
+}
+
+export interface BucketStat {
+  bucket: string // ISO time: UTC hour bucket or UTC day start
+  up: number
+  down: number
+}
+
+export interface NodeUsage {
+  node_id: string
+  node_name: string
+  up: number
+  down: number
+  share: number // fraction of total up+down, 0..1
+}
+
+export interface TrafficStats {
+  from: string
+  to: string
+  bucket: 'hour' | 'day'
+  totals: TrafficTotals
+  series: BucketStat[]
+  by_node: NodeUsage[]
+}
+
+// One grouped row of GET /admin/traffic/aggregate: usage summed per user or
+// per entry point over the filtered range; only the chosen grouping's key
+// fields are populated server-side.
+export interface TrafficAggregateRow {
+  user_id?: string
+  email?: string
+  node_id?: string
+  node_name?: string
+  up: number
+  down: number
+  up_billed: number
+  down_billed: number
+  active_hours: number // distinct hour buckets with traffic
+}
