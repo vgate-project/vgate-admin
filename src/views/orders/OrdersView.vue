@@ -120,7 +120,7 @@ function onOrderCreated(url: string, payModeValue?: string, platformValue?: stri
 async function onStatusChange(row: Order, status: Exclude<OrderStatus, 'pending'>) {
   const verb = status === 'paid' ? 'mark this order as PAID (grants the benefit)' : 'CLOSE this order'
   try {
-    await ElMessageBox.confirm(`Confirm to ${verb} for user ${row.user_id}?`, 'Confirm', { type: 'warning' })
+    await ElMessageBox.confirm(`Confirm to ${verb} for user ${row.user_email || row.user_id}?`, 'Confirm', { type: 'warning' })
   } catch {
     return
   }
@@ -150,7 +150,7 @@ async function onStatusChange(row: Order, status: Exclude<OrderStatus, 'pending'
     <div class="filters">
       <el-input
           v-model="search"
-          placeholder="Search user ID or trade no."
+          placeholder="Search user, email or trade no."
           clearable
           class="filter-search"
           @keyup.enter="onFilterChange"
@@ -185,9 +185,9 @@ async function onStatusChange(row: Order, status: Exclude<OrderStatus, 'pending'
             </el-tooltip>
           </template>
         </el-table-column>
-        <el-table-column label="User" min-width="140" prop="user_id" sortable="custom">
+        <el-table-column label="User" min-width="200" prop="email" sortable="custom">
           <template #default="{ row }">
-            <span class="mono no-wrap">{{ row.user_id }}</span>
+            <span class="mono no-wrap">{{ row.user_email || row.user_id }}</span>
           </template>
         </el-table-column>
         <el-table-column label="Product" min-width="160">

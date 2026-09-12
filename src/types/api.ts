@@ -328,6 +328,7 @@ export type OrderStatus = 'pending' | 'paid' | 'closed'
 export interface Order {
   id: string
   user_id: string
+  user_email?: string // populated on admin listings only
   kind: string // plan | traffic
   plan_id?: string // omitted (omitempty) for non-plan orders
   plan_price_id?: string
