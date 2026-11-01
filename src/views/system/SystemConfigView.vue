@@ -240,6 +240,12 @@ const usersCat: CategoryDef = {
           desc: 'Global monthly quota reset day (1-28). Applied to users with "Monthly reset" enabled. All opted-in users reset on this day.',
           type: 'number',
         },
+        {
+          key: 'quota.reset_timezone',
+          label: 'Quota Reset Timezone',
+          desc: 'IANA timezone name the reset day is evaluated in, e.g. Asia/Shanghai (the reset fires at 00:00 local time on the reset day). Invalid names are rejected.',
+          type: 'text',
+        },
       ],
     },
     {
