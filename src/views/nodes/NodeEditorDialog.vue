@@ -54,6 +54,7 @@ const form = reactive({
   traffic_multiplier: 1,
   speed_limit_up_mbps: 0,
   speed_limit_down_mbps: 0,
+  idle_conn_timeout_seconds: 0,
   level: 0,
   enabled: true,
 })
@@ -105,6 +106,7 @@ function resetForm() {
   form.traffic_multiplier = 1
   form.speed_limit_up_mbps = 0
   form.speed_limit_down_mbps = 0
+  form.idle_conn_timeout_seconds = 0
   form.level = 0
   form.enabled = true
 }
@@ -147,6 +149,7 @@ function prefillFromNode(node: Node) {
   form.traffic_multiplier = node.traffic_multiplier ?? 1
   form.speed_limit_up_mbps = Math.round((node.speed_limit_up_bps ?? 0) / BPS_PER_MBPS)
   form.speed_limit_down_mbps = Math.round((node.speed_limit_down_bps ?? 0) / BPS_PER_MBPS)
+  form.idle_conn_timeout_seconds = node.idle_conn_timeout_seconds ?? 0
   form.level = node.level
   form.enabled = node.enabled
 }
@@ -218,6 +221,7 @@ function buildRequest(): NodeRequest | null {
     traffic_multiplier: form.traffic_multiplier > 0 ? form.traffic_multiplier : 1,
     speed_limit_up_bps: Math.round(form.speed_limit_up_mbps * BPS_PER_MBPS),
     speed_limit_down_bps: Math.round(form.speed_limit_down_mbps * BPS_PER_MBPS),
+    idle_conn_timeout_seconds: form.idle_conn_timeout_seconds,
     enabled: form.enabled,
   }
 }
@@ -515,6 +519,10 @@ async function onGenerateVlessKey() {
             <el-form-item label="Download speed limit">
               <el-input-number v-model="form.speed_limit_down_mbps" :min="0" :max="10000" :step="10" />
               <span class="hint">Mbps, aggregate cap for this node (0 = unlimited). Inherited by virtual children.</span>
+            </el-form-item>
+            <el-form-item label="Idle connection timeout">
+              <el-input-number v-model="form.idle_conn_timeout_seconds" :min="0" :max="86400" :step="60" />
+              <span class="hint">Seconds without any traffic before a client connection is closed (0 = disabled). Keepalives count as traffic, so only dead connections are swept. Inherited by virtual children.</span>
             </el-form-item>
           </el-tab-pane>
         </el-tabs>

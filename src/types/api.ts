@@ -66,6 +66,7 @@ export interface Node {
   traffic_multiplier?: number
   speed_limit_up_bps?: number
   speed_limit_down_bps?: number
+  idle_conn_timeout_seconds?: number
   token: string
   last_seen_at?: string
   online?: boolean
@@ -96,6 +97,7 @@ export interface NodeRequest {
   traffic_multiplier?: number
   speed_limit_up_bps?: number
   speed_limit_down_bps?: number
+  idle_conn_timeout_seconds?: number
   enabled?: boolean // *bool on backend: omit = default true on create
 }
 
