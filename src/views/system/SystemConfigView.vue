@@ -715,7 +715,11 @@ async function saveAll() {
   for (const r of rows.value) {
     if (!r.key.trim()) continue
     const def = fieldByKey[r.key.trim()]
-    if (def?.type === 'lines') {
+    // Only submit keys this form defines. Rows loaded from the backend that
+    // have no field definition are not editable here (e.g. system-managed
+    // internal keys), and echoing them back would be rejected by the API.
+    if (!def) continue
+    if (def.type === 'lines') {
       // Already a JSON array (loaded but not edited) → keep as-is. Otherwise
       // normalize the raw multiline text: split, trim, drop empty lines.
       let normalized = r.value
