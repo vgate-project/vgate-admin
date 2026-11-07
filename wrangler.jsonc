@@ -1,0 +1,19 @@
+{
+  "$schema": "https://unpkg.com/wrangler/config-schema.json",
+  // Cloudflare Worker serving the built admin console as static assets.
+  // Deploy with: npm run build && npx wrangler deploy
+  // NOTE: account_id and routes/custom domains are intentionally NOT committed.
+  // The account is resolved from `wrangler login` (or CLOUDFLARE_ACCOUNT_ID),
+  // and custom domains attached in the dashboard persist across deploys.
+  "name": "vgate-admin",
+  // Keep in sync with the live Worker; changing it alters runtime behavior on next deploy.
+  "compatibility_date": "2026-11-03",
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": "./dist",
+    // Vue Router uses HTML5 history mode, so unknown paths must serve index.html.
+    "not_found_handling": "single-page-application"
+  }
+}
